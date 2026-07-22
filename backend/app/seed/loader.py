@@ -31,7 +31,6 @@ class LoadedScenario:
     zone_id: str
     load_at_offset_minutes: int
     duration_minutes: int
-    scorecard: dict[str, Any]
     events: list[ScenarioEvent]
     evidence: dict[str, Any]
 
@@ -94,7 +93,6 @@ class SeedData:
       zone_id=data.get("zone_id", "C-12"),
       load_at_offset_minutes=data.get("load_at_offset_minutes", -40),
       duration_minutes=data.get("duration_minutes", 120),
-      scorecard=data.get("scorecard", {}),
       events=events,
       evidence=data.get("evidence", {}),
     )

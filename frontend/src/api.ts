@@ -31,6 +31,7 @@ export const api = {
       workers: unknown[];
       permits: unknown[];
       evacuation_routes?: unknown[];
+      map?: { center: { lat: number; lng: number }; zoom: number; bounds: { south: number; west: number; north: number; east: number } };
     }>('/ops/heatmap'),
 
   getRisk: (id: string) => request<import('./types').RiskInstance>(`/risk/instances/${id}`),
@@ -39,7 +40,6 @@ export const api = {
 
   getTopology: () => request<{ zones: import('./types').ZoneState[] }>('/twin/topology'),
 
-  getScorecard: () => request<import('./types').Scorecard>('/demo/scorecard'),
 
   loadScenario: () => request('/demo/load-scenario', { method: 'POST' }),
 

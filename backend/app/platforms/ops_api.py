@@ -94,9 +94,14 @@ def detect_permit_conflicts(zones: dict) -> list[dict[str, Any]]:
     return sorted(permits, key=lambda p: (0 if p["severity"] == "CRITICAL" else 1 if p["severity"] == "ACTIVE" else 2))
 
 
-def build_notifications(risk_instances: dict, emergency: Any, audit_log: list) -> list[dict[str, Any]]:
+def build_notifications(
+    risk_instances: dict,
+    emergency: Any,
+    audit_log: list,
+    stored_notifications: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
     """Notification center — routed alerts, escalations, ack status (§19)."""
-    items: list[dict[str, Any]] = []
+    items: list[dict[str, Any]] = list(stored_notifications or [])
     now = datetime.utcnow()
 
     for risk in sorted(risk_instances.values(), key=lambda r: r.created_at, reverse=True):
@@ -254,39 +259,92 @@ def rag_search(query: str, filters: dict | None = None) -> list[dict[str, Any]]:
     return results[:5]
 
 
+def _avg_lead_time_min(state: Any) -> float:
+    risks = state.get_dashboard_risks()
+    leads = [r.lead_time_seconds / 60 for r in risks if r.lead_time_seconds]
+    if leads:
+        return round(sum(leads) / len(leads), 1)
+    for e in seed_data.active_scenario.events:
+        if e.prahari_alert:
+            return float(abs(e.offset_minutes))
+    return 0.0
+
+
+def _session_eval_metrics(state: Any) -> dict[str, float]:
+    outcomes = getattr(state, "outcomes", [])
+    tp = sum(1 for o in outcomes if o.classification == "TP")
+    fp = sum(1 for o in outcomes if o.classification == "FP")
+    fn = sum(1 for o in outcomes if o.classification == "FN")
+    precision = tp / (tp + fp) if tp + fp else 0.0
+    recall = tp / (tp + fn) if tp + fn else 0.0
+    baseline_recall = 0.41
+    fnr = fn / (tp + fn) if tp + fn else 0.0
+    baseline_fnr = 1.0 - baseline_recall
+    fnr_reduction_pct = round(((baseline_fnr - fnr) / baseline_fnr) * 100, 1) if baseline_fnr and tp + fn else 0.0
+    return {
+        "precision": precision,
+        "recall": recall,
+        "baseline_recall": baseline_recall,
+        "fnr_reduction_pct": fnr_reduction_pct,
+        "prahari_lead_time_min": _avg_lead_time_min(state),
+    }
+
+
+def _crs_timeline_from_scenario() -> list[dict[str, Any]]:
+    return [
+        {"offset": e.offset_minutes, "crs": str(int(e.prahari_crs or 0))}
+        for e in seed_data.active_scenario.events
+        if e.prahari_alert
+    ]
+
+
+def _regulatory_exposure() -> list[str]:
+    evidence = seed_data.active_scenario.evidence
+    refs: list[str] = []
+    for rec in evidence.get("recommendations", []):
+        for citation in rec.get("citation", []):
+            if citation not in refs:
+                refs.append(citation)
+    if refs:
+        return refs
+    return [f"{c.framework} {c.ref}" for c in seed_data.regulatory_corpus[:4]]
+
+
+def build_learning_eval(state: Any) -> dict[str, Any]:
+    """P7 evaluation metrics from session outcomes and live risks."""
+    metrics = _session_eval_metrics(state)
+    return {
+        "scenario_name": seed_data.active_scenario.name,
+        "active_risks": len(state.get_dashboard_risks()),
+        "outcomes_recorded": len(getattr(state, "outcomes", [])),
+        **metrics,
+    }
+
+
 def build_analytics(state: Any) -> dict[str, Any]:
     """Historical analytics — trends, replays, motif performance (§19)."""
-    sc = state.get_scorecard()
+    metrics = _session_eval_metrics(state)
+    scenario = seed_data.active_scenario
     motif_stats = []
     for m in seed_data.motifs:
-        fires = sum(1 for r in state.risk_instances.values() if r.motif_id == m["motif_id"])
+        motif_risks = [r for r in state.risk_instances.values() if r.motif_id == m["motif_id"]]
+        fires = len(motif_risks)
+        motif_leads = [r.lead_time_seconds / 60 for r in motif_risks if r.lead_time_seconds]
         motif_stats.append({
             "motif_id": m["motif_id"],
             "name": m["name"],
             "version": m["version"],
             "fires_in_session": fires,
-            "avg_lead_time_min": sc.prahari_lead_time_minutes if m["motif_id"] == sc.prahari_motif else 0,
-            "precision": sc.precision if fires else None,
+            "avg_lead_time_min": round(sum(motif_leads) / len(motif_leads), 1) if motif_leads else None,
+            "precision": metrics["precision"] if fires else None,
         })
 
-    lead_times = [
-        {"offset": e["offset"], "crs": e["prahari"].replace("CRS ", "") if "CRS" in e["prahari"] else "0"}
-        for e in sc.timeline
-        if e["prahari"] != "SILENT"
-    ]
-
     return {
-        "scenario_name": sc.scenario_name,
+        "scenario_name": scenario.name,
         "replay_offset": state.replay.current_time_offset,
-        "metrics": {
-            "precision": sc.precision,
-            "recall": sc.recall,
-            "fnr_reduction_pct": sc.fnr_reduction_pct,
-            "baseline_recall": sc.baseline_recall,
-            "prahari_lead_time_min": sc.prahari_lead_time_minutes,
-        },
+        "metrics": metrics,
         "motif_performance": motif_stats,
-        "crs_timeline": lead_times,
+        "crs_timeline": _crs_timeline_from_scenario(),
         "active_risks": len(state.get_dashboard_risks()),
         "incidents_prevented_estimate": 1 if state.get_dashboard_risks() else 0,
     }
@@ -294,7 +352,7 @@ def build_analytics(state: Any) -> dict[str, Any]:
 
 def build_executive_dashboard(state: Any) -> dict[str, Any]:
     """Executive dashboard — aggregated trends, KPIs (§15.4.6, §20)."""
-    sc = state.get_scorecard()
+    metrics = _session_eval_metrics(state)
     risks = state.get_dashboard_risks()
     critical = sum(1 for r in risks if r.crs.band.value == "CRITICAL")
     active = sum(1 for r in risks if r.crs.band.value == "ACTIVE")
@@ -311,8 +369,8 @@ def build_executive_dashboard(state: Any) -> dict[str, Any]:
             "active_open": active,
             "zones_at_risk": zones_at_risk,
             "total_zones": total_zones,
-            "avg_lead_time_min": sc.prahari_lead_time_minutes,
-            "fnr_reduction_pct": sc.fnr_reduction_pct,
+            "avg_lead_time_min": metrics["prahari_lead_time_min"],
+            "fnr_reduction_pct": metrics["fnr_reduction_pct"],
             "compliance_citations_rate": 100.0,
             "recommendation_acceptance_pct": 85.0,
         },
@@ -326,7 +384,7 @@ def build_executive_dashboard(state: Any) -> dict[str, Any]:
             {"motif": m["motif_id"], "count": sum(1 for r in risks if r.motif_id == m["motif_id"])}
             for m in seed_data.motifs[:4]
         ],
-        "regulatory_exposure": sc.regulatory_citations,
+        "regulatory_exposure": _regulatory_exposure(),
     }
 
 

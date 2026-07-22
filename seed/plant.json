@@ -1,22 +1,122 @@
 {
   "plant_id": "vsp_1",
   "plant_name": "Visakhapatnam Steel Plant",
+  "map": {
+    "center": { "lat": 17.61285, "lng": 83.19192 },
+    "zoom": 15,
+    "bounds": {
+      "south": 17.606,
+      "west": 83.184,
+      "north": 17.620,
+      "east": 83.200
+    }
+  },
   "zones": [
-    { "zone_id": "C-10", "name": "Coke Oven Battery A", "zone_class": "PROCESS", "geo": { "x": 100, "y": 55, "level": "G" } },
-    { "zone_id": "C-11", "name": "Coke Oven Battery B", "zone_class": "PROCESS", "geo": { "x": 210, "y": 55, "level": "G" } },
-    { "zone_id": "C-12", "name": "Gas Line Maintenance Zone", "zone_class": "CONFINED_SPACE", "geo": { "x": 210, "y": 130, "level": "G" } },
-    { "zone_id": "C-13", "name": "Melt Shop Entry", "zone_class": "PROCESS", "geo": { "x": 320, "y": 130, "level": "G" } },
-    { "zone_id": "C-14", "name": "Storage Yard", "zone_class": "OPEN", "geo": { "x": 80, "y": 175, "level": "G" } },
-    { "zone_id": "C-15", "name": "Control Room Annex", "zone_class": "ADMIN", "geo": { "x": 320, "y": 40, "level": "G" } }
+    {
+      "zone_id": "C-10",
+      "name": "Coke Oven Battery A",
+      "zone_class": "PROCESS",
+      "geo": {
+        "lat": 17.6150,
+        "lng": 83.1890,
+        "level": "G",
+        "polygon": [
+          [17.6156, 83.1883],
+          [17.6156, 83.1897],
+          [17.6144, 83.1897],
+          [17.6144, 83.1883]
+        ]
+      }
+    },
+    {
+      "zone_id": "C-11",
+      "name": "Coke Oven Battery B",
+      "zone_class": "PROCESS",
+      "geo": {
+        "lat": 17.6145,
+        "lng": 83.1925,
+        "level": "G",
+        "polygon": [
+          [17.6151, 83.1918],
+          [17.6151, 83.1932],
+          [17.6139, 83.1932],
+          [17.6139, 83.1918]
+        ]
+      }
+    },
+    {
+      "zone_id": "C-12",
+      "name": "Gas Line Maintenance Zone",
+      "zone_class": "CONFINED_SPACE",
+      "geo": {
+        "lat": 17.6128,
+        "lng": 83.1919,
+        "level": "G",
+        "polygon": [
+          [17.6134, 83.1912],
+          [17.6134, 83.1926],
+          [17.6122, 83.1926],
+          [17.6122, 83.1912]
+        ]
+      }
+    },
+    {
+      "zone_id": "C-13",
+      "name": "Melt Shop Entry",
+      "zone_class": "PROCESS",
+      "geo": {
+        "lat": 17.6115,
+        "lng": 83.1945,
+        "level": "G",
+        "polygon": [
+          [17.6121, 83.1938],
+          [17.6121, 83.1952],
+          [17.6109, 83.1952],
+          [17.6109, 83.1938]
+        ]
+      }
+    },
+    {
+      "zone_id": "C-14",
+      "name": "Storage Yard",
+      "zone_class": "OPEN",
+      "geo": {
+        "lat": 17.6100,
+        "lng": 83.1895,
+        "level": "G",
+        "polygon": [
+          [17.6106, 83.1888],
+          [17.6106, 83.1902],
+          [17.6094, 83.1902],
+          [17.6094, 83.1888]
+        ]
+      }
+    },
+    {
+      "zone_id": "C-15",
+      "name": "Control Room Annex",
+      "zone_class": "ADMIN",
+      "geo": {
+        "lat": 17.6155,
+        "lng": 83.1950,
+        "level": "G",
+        "polygon": [
+          [17.6161, 83.1943],
+          [17.6161, 83.1957],
+          [17.6149, 83.1957],
+          [17.6149, 83.1943]
+        ]
+      }
+    }
   ],
   "evacuation_routes": [
     {
       "from_zone": "C-12",
       "label": "Evacuation route",
       "route": [
-        { "x": 210, "y": 130 },
-        { "x": 155, "y": 90 },
-        { "x": 100, "y": 55 }
+        { "lat": 17.6128, "lng": 83.1919 },
+        { "lat": 17.6140, "lng": 83.1902 },
+        { "lat": 17.6150, "lng": 83.1890 }
       ]
     }
   ]

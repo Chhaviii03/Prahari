@@ -16,7 +16,12 @@ export function Layout({
   onRealtimeEvent?: () => void;
 }) {
   const { connected, reconnecting } = useWebSocket((event) => {
-    if (event.type === 'risk_updated' || event.type === 'emergency' || event.type === 'replay_step') {
+    if (
+      event.type === 'risk_updated' ||
+      event.type === 'emergency' ||
+      event.type === 'replay_step' ||
+      event.type === 'notification'
+    ) {
       onRealtimeEvent?.();
     }
   });

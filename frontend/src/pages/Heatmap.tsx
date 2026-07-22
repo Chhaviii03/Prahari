@@ -2,31 +2,44 @@ import { useEffect, useState } from 'react';
 import { api } from '../api';
 import type { ZoneState } from '../types';
 import { bandHex } from '../components/ui';
+import { PlantMap } from '../components/PlantMap';
 
-const ZONE_W = 58;
-const ZONE_H = 36;
-const VIEW_W = 400;
-const VIEW_H = 210;
+type MapConfig = {
+  center: { lat: number; lng: number };
+  zoom: number;
+  bounds: { south: number; west: number; north: number; east: number };
+};
+
+type Worker = { worker_id: string; zone_id: string; lat: number; lng: number; name: string };
 
 type EvacRoute = {
   from_zone: string;
   label?: string;
-  route: { x: number; y: number }[];
+  route: { lat: number; lng: number }[];
+};
+
+const DEFAULT_MAP: MapConfig = {
+  center: { lat: 17.61285, lng: 83.19192 },
+  zoom: 15,
+  bounds: { south: 17.606, west: 83.184, north: 17.620, east: 83.200 },
 };
 
 export function Heatmap() {
   const [zones, setZones] = useState<ZoneState[]>([]);
-  const [workers, setWorkers] = useState<{ worker_id: string; zone_id: string; x: number; y: number; name: string }[]>([]);
+  const [workers, setWorkers] = useState<Worker[]>([]);
   const [permits, setPermits] = useState<{ permit_id: string; zone_id: string; status: string }[]>([]);
   const [evacRoutes, setEvacRoutes] = useState<EvacRoute[]>([]);
+  const [mapConfig, setMapConfig] = useState<MapConfig>(DEFAULT_MAP);
 
   useEffect(() => {
-    const load = () => api.getHeatmap().then((d) => {
-      setZones(d.zones);
-      setWorkers(d.workers as typeof workers);
-      setPermits(d.permits as typeof permits);
-      setEvacRoutes((d as { evacuation_routes?: EvacRoute[] }).evacuation_routes ?? []);
-    });
+    const load = () =>
+      api.getHeatmap().then((d) => {
+        setZones(d.zones);
+        setWorkers(d.workers as Worker[]);
+        setPermits(d.permits as typeof permits);
+        setEvacRoutes((d as { evacuation_routes?: EvacRoute[] }).evacuation_routes ?? []);
+        if ((d as { map?: MapConfig }).map) setMapConfig((d as { map: MapConfig }).map);
+      });
     load();
     const i = setInterval(load, 5000);
     return () => clearInterval(i);
@@ -42,105 +55,16 @@ export function Heatmap() {
     <div className="p-4 h-full flex flex-col">
       <header className="mb-4">
         <h1 className="text-lg font-semibold">Geospatial Safety Heatmap</h1>
-        <p className="text-xs text-ink-secondary">Plant layout · CRS-based zone heatmap · Workers · Permits (§15.4.2)</p>
+        <p className="text-xs text-ink-secondary">
+          Visakhapatnam Steel Plant · Satellite + CRS zone overlays · Workers · Permits (§15.4.2)
+        </p>
       </header>
 
       <div className="flex-1 grid grid-cols-12 gap-4 min-h-0">
-        <div className="col-span-9 bg-bg-surface rounded-xl border border-line shadow-card p-4 relative overflow-hidden">
-          <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="w-full h-full" style={{ minHeight: 420 }}>
-            <rect width={VIEW_W} height={VIEW_H} fill="#FAF8F8" />
-            <text x={VIEW_W / 2} y={16} textAnchor="middle" fill="#475569" fontSize="10">
-              Visakhapatnam Steel Plant — Zone Map
-            </text>
+        <div className="col-span-9 bg-bg-surface rounded-xl border border-line shadow-card p-2 relative overflow-hidden min-h-[420px]">
+          <PlantMap mapConfig={mapConfig} zones={zones} workers={workers} evacRoutes={visibleRoutes} />
 
-            {/* Evacuation routes — drawn under zones */}
-            {visibleRoutes.map((route, idx) => {
-              if (route.route.length < 2) return null;
-              const d = route.route.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-              const mid = route.route[Math.floor(route.route.length / 2)];
-              return (
-                <g key={`evac-${idx}`}>
-                  <path
-                    d={d}
-                    fill="none"
-                    stroke="#EF4444"
-                    strokeWidth="2"
-                    strokeDasharray="6 4"
-                    strokeLinecap="round"
-                  />
-                  <circle cx={route.route[0].x} cy={route.route[0].y} r="3" fill="#EF4444" />
-                  <circle cx={route.route[route.route.length - 1].x} cy={route.route[route.route.length - 1].y} r="3" fill="#EF4444" />
-                  <text
-                    x={mid.x}
-                    y={mid.y - 8}
-                    textAnchor="middle"
-                    fill="#EF4444"
-                    fontSize="8"
-                    fontWeight="bold"
-                  >
-                    {route.label || 'Evacuation route'}
-                  </text>
-                </g>
-              );
-            })}
-
-            {zones.map((zone) => {
-              const x = zone.geo.x;
-              const y = zone.geo.y;
-              const band = zone.band || (zone.crs >= 75 ? 'CRITICAL' : zone.crs >= 40 ? 'ACTIVE' : zone.crs > 0 ? 'WATCH' : 'OK');
-              const isStale = zone.data_quality === 'STALE';
-              let fill = '#FFF1EC';
-              if (!isStale && band === 'CRITICAL') fill = bandHex('CRITICAL');
-              else if (!isStale && band === 'ACTIVE') fill = bandHex('ACTIVE');
-              else if (!isStale && band === 'WATCH') fill = bandHex('WATCH');
-              else if (isStale) fill = '#9CA3AF';
-              const opacity = zone.crs > 0 ? Math.min(0.85, 0.25 + zone.crs / 120) : 0.55;
-
-              return (
-                <g key={zone.zone_id}>
-                  <rect
-                    x={x - ZONE_W / 2}
-                    y={y - ZONE_H / 2}
-                    width={ZONE_W}
-                    height={ZONE_H}
-                    rx="4"
-                    fill={fill}
-                    fillOpacity={opacity}
-                    stroke={band === 'CRITICAL' || band === 'ACTIVE' ? fill : '#E5E7EB'}
-                    strokeWidth={zone.crs >= 40 ? 2 : 1}
-                    className={isStale ? 'stale-hatch' : ''}
-                  />
-                  <text x={x} y={y - 8} textAnchor="middle" fill="#111827" fontSize="9" fontWeight="bold">
-                    {zone.zone_id}
-                  </text>
-                  <text x={x} y={y + 2} textAnchor="middle" fill="#475569" fontSize="6.5">
-                    {zone.name.length > 16 ? zone.name.slice(0, 15) + '…' : zone.name}
-                  </text>
-                  {zone.crs > 0 && (
-                    <text x={x} y={y + 12} textAnchor="middle" fill="#111827" fontSize="7" className="tabular-nums">
-                      CRS {zone.crs.toFixed(0)} · {band}
-                    </text>
-                  )}
-                  {zone.occupancy > 0 && (
-                    <>
-                      <circle cx={x + ZONE_W / 2 - 6} cy={y - ZONE_H / 2 + 6} r="7" fill="#F5A892" />
-                      <text x={x + ZONE_W / 2 - 6} y={y - ZONE_H / 2 + 9} textAnchor="middle" fill="#111827" fontSize="7" fontWeight="bold">
-                        {zone.occupancy}
-                      </text>
-                    </>
-                  )}
-                </g>
-              );
-            })}
-
-            {workers.map((w) => (
-              <g key={w.worker_id}>
-                <circle cx={w.x} cy={w.y} r="3.5" fill="#F5A892" stroke="#FFFFFF" strokeWidth="1.5" />
-              </g>
-            ))}
-          </svg>
-
-          <div className="absolute bottom-4 left-4 flex flex-wrap gap-x-4 gap-y-1 text-[10px]">
+          <div className="absolute bottom-4 left-4 z-[1000] flex flex-wrap gap-x-4 gap-y-1 text-[10px] bg-bg-surface/95 border border-line rounded-lg px-2 py-1.5 shadow-card">
             {[
               { color: bandHex('CRITICAL'), label: 'Critical' },
               { color: bandHex('ACTIVE'), label: 'Active' },
@@ -153,9 +77,7 @@ export function Heatmap() {
               </div>
             ))}
             <div className="flex items-center gap-1.5">
-              <svg width="20" height="8" className="shrink-0">
-                <line x1="0" y1="4" x2="20" y2="4" stroke="#EF4444" strokeWidth="2" strokeDasharray="4 2" />
-              </svg>
+              <span className="w-4 h-0.5 bg-sev-critical border-dashed border-t border-sev-critical" />
               <span className="text-sev-critical font-medium">Evacuation route</span>
             </div>
           </div>
@@ -189,7 +111,7 @@ export function Heatmap() {
           </div>
 
           {visibleRoutes.length > 0 && (
-            <div className="bg-sev-critical/10 rounded-lg border border-sev-critical/30 p-3">
+            <div className="bg-sev-critical/10 rounded-xl border border-sev-critical/30 p-3">
               <h3 className="text-xs font-medium text-sev-critical uppercase mb-1">Evacuation Route</h3>
               <p className="text-xs text-ink-secondary">
                 Follow the red dashed line on the map to exit {visibleRoutes[0].from_zone} to the assembly point.

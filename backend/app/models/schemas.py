@@ -138,7 +138,7 @@ class ZoneState(BaseModel):
     scheduled_permits: list[str] = []
     forecast_eta_minutes: float | None = None
     data_quality: str = "GOOD"
-    geo: dict[str, float | str] = {}
+    geo: dict[str, Any] = {}
 
 
 class PlantTopology(BaseModel):
@@ -169,22 +169,6 @@ class AgentEnrichment(BaseModel):
     trace_ref: str
 
 
-class ScorecardResult(BaseModel):
-    scenario_name: str
-    baseline_detected: bool
-    baseline_lead_time_minutes: float
-    prahari_detected: bool
-    prahari_lead_time_minutes: float
-    prahari_crs: float
-    prahari_motif: str
-    regulatory_citations: list[str]
-    fnr_reduction_pct: float
-    precision: float
-    recall: float
-    baseline_recall: float
-    timeline: list[dict[str, Any]]
-
-
 class DashboardItem(BaseModel):
     risk: RiskInstance
     summary: str
@@ -197,6 +181,7 @@ class HeatmapData(BaseModel):
     workers: list[dict[str, Any]]
     permits: list[dict[str, Any]]
     evacuation_routes: list[dict[str, Any]]
+    map: dict[str, Any] = {}
 
 
 class User(BaseModel):

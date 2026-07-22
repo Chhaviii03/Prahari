@@ -18,14 +18,13 @@ from app.models.schemas import (
     ReplayState,
     RiskInstance,
     RiskStatus,
-    ScorecardResult,
     TimelineEvent,
     ZoneState,
 )
 from app.platforms.digital_twin import DigitalTwin
-from app.platforms.intelligence import build_evidence_package, enrich_risk_with_agents
+from app.platforms.intelligence import build_evidence_package, enrich_risk_from_seed_templates, enrich_risk_with_agents
 from app.platforms.ops_api import sync_zone_crs_from_risks
-from app.platforms.risk_engine import create_risk_instance, evaluate_zone, reload_motifs
+from app.platforms.risk_engine import MOTIFS, create_risk_instance, evaluate_zone, reload_motifs
 from app.seed.loader import seed_data
 
 
@@ -56,7 +55,25 @@ class PrahariState:
         self.emergency = EmergencyStatus(active=False, steps=[])
         self.audit_log: list[dict[str, Any]] = []
         self.outcomes: list[OutcomeRecord] = []
+        self.notifications: list[dict[str, Any]] = []
         self._db_ready = False
+        self._db_unavailable = False
+
+    async def _ensure_db(self) -> bool:
+        """Return True if Postgres is reachable; cache negative result for this process."""
+        if self._db_unavailable:
+            return False
+        if self._db_ready:
+            return True
+        try:
+            from sqlalchemy import text
+            async with async_session_factory() as session:
+                await session.execute(text("SELECT 1"))
+            self._db_ready = True
+            return True
+        except Exception:
+            self._db_unavailable = True
+            return False
 
     def subscribe(self, queue: asyncio.Queue) -> None:
         self._subscribers.append(queue)
@@ -78,6 +95,11 @@ class PrahariState:
             }
         )
 
+    async def _emit_notification(self, notif: dict[str, Any]) -> None:
+        self.notifications.insert(0, notif)
+        self.notifications = self.notifications[:50]
+        await self.broadcast({"type": "notification", "data": notif})
+
     @property
     def active_zone_id(self) -> str:
         return seed_data.active_scenario.zone_id
@@ -87,31 +109,134 @@ class PrahariState:
 
     async def hydrate_from_db(self) -> None:
         """Load open risks / twin / emergency from Postgres into caches."""
-        async with async_session_factory() as session:
-            zone_repo = ZoneRepository(session)
-            risk_repo = RiskRepository(session)
-            ops_repo = OpsRepository(session)
+        try:
+            async with async_session_factory() as session:
+                zone_repo = ZoneRepository(session)
+                risk_repo = RiskRepository(session)
+                ops_repo = OpsRepository(session)
 
-            for zone_id in self._plant_zone_ids():
-                history = await zone_repo.get_ch4_history(zone_id, minutes=240)
-                self.twin.history[zone_id] = history
-                zs = await zone_repo.get_zone_state(zone_id)
-                if zs:
-                    self.twin.zones[zone_id] = zs
+                for zone_id in self._plant_zone_ids():
+                    history = await zone_repo.get_ch4_history(zone_id, minutes=240)
+                    self.twin.history[zone_id] = history
+                    zs = await zone_repo.get_zone_state(zone_id)
+                    if zs:
+                        self.twin.zones[zone_id] = zs
 
-            risks = await risk_repo.list_open_risks()
-            self.risk_instances = {r.risk_id: r for r in risks}
-            for r in risks:
-                if r.evidence_package_id:
-                    ep = await risk_repo.get_evidence(r.evidence_package_id)
-                    if ep:
-                        self.evidence_packages[ep.evidence_id] = ep
+                risks = await risk_repo.list_open_risks()
+                self.risk_instances = {r.risk_id: r for r in risks}
+                for r in risks:
+                    if r.evidence_package_id:
+                        ep = await risk_repo.get_evidence(r.evidence_package_id)
+                        if ep:
+                            self.evidence_packages[ep.evidence_id] = ep
 
-            self.emergency = await ops_repo.get_emergency()
-            self.audit_log = await ops_repo.list_audit(50)
-            self._db_ready = True
+                self.emergency = await ops_repo.get_emergency()
+                self.audit_log = await ops_repo.list_audit(50)
+                self._db_ready = True
+        except Exception:
+            self._db_unavailable = True
+            raise
+
+    async def _apply_scenario_event_local(self, event) -> RiskInstance | None:
+        """In-memory demo path when Postgres is unavailable."""
+        updates = event.updates
+        zone_id = self.active_zone_id
+
+        if "maintenance_active" in updates:
+            self._maintenance_active = updates["maintenance_active"]
+        if "equipment_fault" in updates:
+            self._equipment_fault = updates.get("equipment_fault", False)
+        if "ppe_missing" in updates:
+            self._ppe_missing = updates.get("ppe_missing", False)
+
+        zone_updates = {k: v for k, v in updates.items() if k in ZoneState.model_fields}
+        if "ch4_lel" in zone_updates:
+            ch4 = zone_updates["ch4_lel"]
+            now = datetime.utcnow()
+            self.twin.history[zone_id] = [
+                (now - timedelta(minutes=100), max(0.5, ch4 - 6)),
+                (now - timedelta(minutes=75), max(1.0, ch4 - 4.5)),
+                (now - timedelta(minutes=50), max(1.5, ch4 - 3)),
+                (now - timedelta(minutes=25), max(2.0, ch4 - 1.5)),
+                (now, ch4),
+            ]
+
+        if zone_updates:
+            self.twin.update_zone(zone_id, **zone_updates)
+
+        if event.offset_minutes < 0:
+            lead_override = abs(event.offset_minutes)
+            self.twin.update_zone(zone_id, forecast_eta_minutes=float(lead_override))
+        else:
+            self.twin.refresh_forecasts()
+
+        zone = self.twin.get_zone(zone_id)
+        if not zone:
+            return None
+
+        detections = evaluate_zone(
+            zone,
+            maintenance_active=self._maintenance_active,
+            equipment_fault=self._equipment_fault,
+            ppe_missing=self._ppe_missing,
+        )
+        if not detections:
+            return None
+
+        motif, crs, signals, lead_time = detections[0]
+        if event.offset_minutes < 0:
+            lead_time = abs(event.offset_minutes) * 60
+
+        existing = next(
+            (
+                r for r in self.risk_instances.values()
+                if r.zone_id == zone_id and r.motif_id == motif.motif_id
+                and r.status not in (RiskStatus.RESOLVED, RiskStatus.FALSE_POSITIVE)
+            ),
+            None,
+        )
+
+        if existing:
+            existing.crs = crs
+            existing.status = (
+                RiskStatus.CRITICAL if crs.band.value == "CRITICAL"
+                else RiskStatus.ACTIVE if crs.band.value == "ACTIVE"
+                else RiskStatus.WATCH
+            )
+            existing.lead_time_seconds = lead_time
+            existing.contributing_signals = signals
+            existing.updated_at = datetime.utcnow()
+            existing.timeline.append(
+                TimelineEvent(ts=datetime.utcnow(), event="UPDATED", actor="P3", note=f"CRS {crs.score}")
+            )
+            risk = existing
+        else:
+            risk_id = f"RI-{uuid.uuid4().hex[:10].upper()}"
+            risk = create_risk_instance(
+                motif, crs, zone, signals, lead_time,
+                settings.demo_org_id, settings.demo_plant_id, risk_id,
+            )
+            self.risk_instances[risk_id] = risk
+
+        enrichment = enrich_risk_from_seed_templates(risk, zone)
+        risk.narrative = enrichment.narrative
+        evidence = build_evidence_package(risk, zone, enrichment)
+        risk.evidence_package_id = evidence.evidence_id
+        self.evidence_packages[evidence.evidence_id] = evidence
+        sync_zone_crs_from_risks(self.twin.zones, self.risk_instances)
+        return risk
 
     async def apply_scenario_event(self, event) -> RiskInstance | None:
+        if not await self._ensure_db():
+            return await self._apply_scenario_event_local(event)
+        try:
+            return await self._apply_scenario_event_db(event)
+        except Exception as exc:
+            print(f"[PRAHARI] DB scenario apply failed, in-memory fallback: {exc}")
+            self._db_unavailable = True
+            return await self._apply_scenario_event_local(event)
+
+    async def _apply_scenario_event_db(self, event) -> RiskInstance | None:
         updates = event.updates
         zone_id = self.active_zone_id
         now = datetime.utcnow()
@@ -288,52 +413,10 @@ class PrahariState:
             await self.broadcast({"type": "replay_step", "data": result})
             await asyncio.sleep(speed)
         self.replay.running = False
-        await self.broadcast({"type": "replay_complete", "data": {"scorecard": self.get_scorecard().model_dump(mode="json")}})
+        await self.broadcast({"type": "replay_complete", "data": {"replay_offset": self.replay.current_time_offset}})
 
     def stop_replay(self) -> None:
         self.replay.running = False
-
-    def get_scorecard(self) -> ScorecardResult:
-        scenario = seed_data.active_scenario
-        sc = scenario.scorecard
-        prahari_detected_at = None
-        baseline_detected_at = None
-        prahari_crs = 86.0
-        prahari_motif = "CS-HOTWORK-GAS"
-
-        for e in scenario.events:
-            if e.prahari_alert and prahari_detected_at is None:
-                prahari_detected_at = e.offset_minutes
-                prahari_crs = e.prahari_crs or 86
-                prahari_motif = e.prahari_motif or prahari_motif
-            if e.baseline_alert:
-                baseline_detected_at = e.offset_minutes
-
-        prahari_lead = abs(prahari_detected_at) if prahari_detected_at is not None else 0
-
-        return ScorecardResult(
-            scenario_name=scenario.name,
-            baseline_detected=baseline_detected_at is not None,
-            baseline_lead_time_minutes=0,
-            prahari_detected=True,
-            prahari_lead_time_minutes=prahari_lead,
-            prahari_crs=prahari_crs,
-            prahari_motif=prahari_motif,
-            regulatory_citations=sc.get("regulatory_citations", []),
-            fnr_reduction_pct=sc.get("fnr_reduction_pct", 58.0),
-            precision=sc.get("precision", 0.83),
-            recall=sc.get("recall", 0.91),
-            baseline_recall=sc.get("baseline_recall", 0.41),
-            timeline=[
-                {
-                    "offset": e.offset_minutes,
-                    "description": e.description,
-                    "baseline": "ALERT" if e.baseline_alert else "SILENT",
-                    "prahari": f"CRS {e.prahari_crs}" if e.prahari_alert else "SILENT",
-                }
-                for e in scenario.events
-            ],
-        )
 
     def get_dashboard_risks(self) -> list[RiskInstance]:
         risks = [r for r in self.risk_instances.values() if r.status not in (RiskStatus.RESOLVED, RiskStatus.FALSE_POSITIVE)]
@@ -387,6 +470,23 @@ class PrahariState:
             self.audit_log = await ops_repo.list_audit(50)
 
         self.risk_instances[risk_id] = risk
+
+        if action == "acknowledge":
+            await self._emit_notification({
+                "id": f"notif-ack-{risk_id}-{int(datetime.utcnow().timestamp())}",
+                "type": "ACKNOWLEDGEMENT",
+                "priority": risk.crs.band.value,
+                "title": f"Risk acknowledged — {risk.zone_id} · {risk.motif_id}",
+                "body": note or f"{actor} acknowledged CRS {risk.crs.score:.0f} in {risk.zone_id}",
+                "zone_id": risk.zone_id,
+                "risk_id": risk.risk_id,
+                "acknowledged": False,
+                "status": "ACKNOWLEDGED",
+                "ts": datetime.utcnow().isoformat(),
+                "actor": actor,
+                "routes_to": ["supervisor", "permit_officer", "compliance_officer", "executive", "safety_officer"],
+            })
+
         return risk
 
     async def declare_emergency(self, zone_id: str, risk_id: str | None, actor: str) -> EmergencyStatus:
@@ -422,14 +522,18 @@ class PrahariState:
 
     async def reset_demo(self) -> None:
         self.stop_replay()
-        async with async_session_factory() as session:
-            zone_repo = ZoneRepository(session)
-            risk_repo = RiskRepository(session)
-            await risk_repo.clear_risks_and_evidence()
-            for zone_id in self._plant_zone_ids():
-                await zone_repo.clear_zone_runtime(zone_id)
-            await session.commit()
-
+        if await self._ensure_db():
+            try:
+                async with async_session_factory() as session:
+                    zone_repo = ZoneRepository(session)
+                    risk_repo = RiskRepository(session)
+                    await risk_repo.clear_risks_and_evidence()
+                    for zone_id in self._plant_zone_ids():
+                        await zone_repo.clear_zone_runtime(zone_id)
+                    await session.commit()
+            except Exception as exc:
+                print(f"[PRAHARI] DB reset skipped, in-memory only: {exc}")
+                self._db_unavailable = True
         self._init_from_seed()
 
     async def load_scenario(self, scenario_id: str | None = None) -> dict:

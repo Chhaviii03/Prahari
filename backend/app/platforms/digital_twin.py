@@ -42,6 +42,7 @@ class DigitalTwin:
         self.plant_id = plant_id or plant.get("plant_id", "vsp_1")
         self.plant_name = plant_name or plant.get("plant_name", "Plant")
         self.evacuation_routes = plant.get("evacuation_routes", [])
+        self.map_config = plant.get("map", {})
         self.zones: dict[str, ZoneState] = {}
         self.history: dict[str, list[tuple[datetime, float]]] = {}
         self._init_zones()
@@ -105,12 +106,14 @@ class DigitalTwin:
         workers = []
         permits = []
         for zone in self.zones.values():
+            lat = float(zone.geo.get("lat", 0) or 0)
+            lng = float(zone.geo.get("lng", 0) or 0)
             for i in range(zone.occupancy):
                 workers.append({
                     "worker_id": f"W-{zone.zone_id}-{i+1}",
                     "zone_id": zone.zone_id,
-                    "x": zone.geo.get("x", 0) - 12 + (i * 10),
-                    "y": zone.geo.get("y", 0) + 6,
+                    "lat": lat + 0.00015 * (i - zone.occupancy / 2),
+                    "lng": lng + 0.0002 * i,
                     "name": f"Worker {i+1}",
                 })
             for p in zone.active_permits:
@@ -124,4 +127,5 @@ class DigitalTwin:
             "workers": workers,
             "permits": permits,
             "evacuation_routes": self.evacuation_routes,
+            "map": self.map_config,
         }

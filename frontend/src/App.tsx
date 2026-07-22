@@ -5,7 +5,6 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Heatmap } from './pages/Heatmap';
 import { RiskDetail } from './pages/RiskDetail';
-import { ScorecardPage } from './pages/Scorecard';
 import { Mobile } from './pages/Mobile';
 import { CopilotPage } from './pages/Copilot';
 import { IncidentResponsePage } from './pages/IncidentResponse';
@@ -34,7 +33,6 @@ function AppRoutes({ user, onLogout }: { user: User; onLogout: () => void }) {
         <Route path="/" element={<Dashboard />} />
         <Route path="/heatmap" element={<Heatmap />} />
         <Route path="/risk/:id" element={<RiskDetail />} />
-        <Route path="/scorecard" element={<ScorecardPage />} />
         <Route path="/copilot" element={<CopilotPage />} />
         <Route path="/incident" element={<IncidentResponsePage />} />
         <Route path="/permits" element={<PermitIntelligencePage />} />

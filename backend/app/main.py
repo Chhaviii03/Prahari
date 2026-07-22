@@ -19,6 +19,7 @@ from app.platforms.enterprise import authenticate, check_permission, create_toke
 from app.platforms.ops_api import (
     build_analytics,
     build_executive_dashboard,
+    build_learning_eval,
     build_notifications,
     build_reports,
     copilot_answer,
@@ -223,7 +224,7 @@ async def override_permit(permit_id: str, body: dict, user=Depends(get_current_u
 
 @app.get("/v1/ops/notifications")
 async def get_notifications(role: str | None = None):
-    items = build_notifications(state.risk_instances, state.emergency, state.audit_log)
+    items = build_notifications(state.risk_instances, state.emergency, state.audit_log, state.notifications)
     if role:
         items = [n for n in items if role in n.get("routes_to", []) or role == "admin"]
     return {"items": items, "unread": sum(1 for n in items if not n.get("acknowledged"))}
@@ -336,15 +337,10 @@ async def record_outcome(outcome: OutcomeRecord):
 
 @app.get("/v1/learning/eval")
 async def get_eval():
-    return state.get_scorecard()
+    return build_learning_eval(state)
 
 
 # --- Demo / Replay ---
-@app.get("/v1/demo/scorecard")
-async def get_scorecard():
-    return state.get_scorecard()
-
-
 @app.get("/v1/demo/replay/state")
 async def replay_state():
     return state.replay

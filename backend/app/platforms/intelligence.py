@@ -107,6 +107,23 @@ def _zone_payload(zone: ZoneState) -> dict:
     }
 
 
+def enrich_risk_from_seed_templates(risk: RiskInstance, zone: ZoneState) -> AgentEnrichment:
+    """Template-only enrichment — no LLM/DB required (demo fallback)."""
+    evidence_cfg = seed_data.active_scenario.evidence
+    vars = _template_vars(zone, evidence_cfg)
+    narrative = _fmt(evidence_cfg.get("narrative_template", ""), vars)
+    agent_templates = evidence_cfg.get("agent_templates", {})
+    per_agent = {agent: _fmt(text, vars) for agent, text in agent_templates.items()}
+    if "planner" not in per_agent:
+        per_agent["planner"] = narrative
+    return AgentEnrichment(
+        risk_id=risk.risk_id,
+        narrative=narrative,
+        per_agent_findings=per_agent,
+        trace_ref="prahari://agents/template/seed",
+    )
+
+
 async def enrich_risk_with_agents(
     risk: RiskInstance,
     zone: ZoneState,

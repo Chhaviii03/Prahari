@@ -44,7 +44,6 @@ Each file in `scenarios/` contains:
 - `load_at_offset_minutes` — which timeline step loads when you click "Load Demo"
 - `events[]` — timeline steps (sensor readings, permits, workers)
 - `evidence` — narratives, agent text, root causes, recommendations (supports `{zone_id}`, `{ch4_lel}`, `{occupancy}` placeholders)
-- `scorecard` — metrics shown on the Demo Scorecard page
 
 ## Example: change CH₄ level
 

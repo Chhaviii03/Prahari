@@ -45,7 +45,14 @@ export interface ZoneState {
   scheduled_permits: string[];
   forecast_eta_minutes: number | null;
   data_quality: string;
-  geo: { x: number; y: number; level: string };
+  geo: {
+    lat?: number;
+    lng?: number;
+    x?: number;
+    y?: number;
+    level?: string;
+    polygon?: [number, number][];
+  };
 }
 
 export interface EvidencePackage {
@@ -59,22 +66,6 @@ export interface EvidencePackage {
   agent_findings: Record<string, string>;
   confidence: Record<string, number>;
   assembled_at: string;
-}
-
-export interface Scorecard {
-  scenario_name: string;
-  baseline_detected: boolean;
-  baseline_lead_time_minutes: number;
-  prahari_detected: boolean;
-  prahari_lead_time_minutes: number;
-  prahari_crs: number;
-  prahari_motif: string;
-  regulatory_citations: string[];
-  fnr_reduction_pct: number;
-  precision: number;
-  recall: number;
-  baseline_recall: number;
-  timeline: { offset: number; description: string; baseline: string; prahari: string }[];
 }
 
 export interface User {
