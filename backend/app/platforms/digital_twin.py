@@ -7,6 +7,9 @@ from datetime import datetime
 from app.models.schemas import PlantTopology, ZoneState
 from app.seed.loader import seed_data
 
+# Compatibility alias for scripts/seed.py
+PLANT_ZONES = seed_data.plant.get("zones", [])
+
 
 def _linear_forecast(values: list[float], steps: int = 24) -> tuple[list[float], int | None]:
     if len(values) < 2:

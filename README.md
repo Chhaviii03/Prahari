@@ -25,17 +25,102 @@ All demo content is in the **`seed/`** folder as JSON files. See [`seed/README.m
 - Reload after edits → `POST /v1/demo/reload-seed` (or restart backend)
 
 
-### Backend (Python/FastAPI)
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (running)
+- Python 3.11+
+- Node.js 18+ (for frontend)
+
+### 1. Database setup (PostgreSQL 16 + TimescaleDB)
+
+Each developer runs this **on their own machine**. The database is local (`localhost`) — it is not shared automatically with teammates.
+
+#### Step A — Start the database container
+
+From the `Prahari/` folder (where `docker-compose.yml` lives):
+
+```bash
+docker compose up -d
+```
+
+Confirm in Docker Desktop that **`prahari` → `db-1`** is running, with ports **`5433:5432`**.
+
+> Port **5433** on the host maps to Postgres **5432** inside the container (avoids clashes with a local Postgres already on 5432).
+
+#### Step B — Install backend deps, migrate, and seed
 
 ```bash
 cd backend
 pip install -r requirements.txt
+cp .env.example .env
+alembic upgrade head
+python -m scripts.seed
+```
+
+This creates all tables and seeds:
+
+- Plant + 6 zones (C-10 … C-15) and sensors
+- Motifs, demo users, regulations / incidents corpus
+- Equipment (E-441)
+
+Default connection (also in `backend/.env.example`):
+
+| Field | Value |
+|--------|--------|
+| Host | `localhost` |
+| Port | `5433` |
+| Database | `prahari` |
+| Username | `prahari` |
+| Password | `prahari_dev` |
+| URL | `postgresql+asyncpg://prahari:prahari_dev@localhost:5433/prahari` |
+
+#### Step C — View tables (pick one)
+
+**pgAdmin (GUI, no SQL required)**
+
+1. Install [pgAdmin 4](https://www.pgadmin.org/download/)
+2. Register Server → Connection tab with the credentials above
+3. Browse: **Databases → prahari → Schemas → public → Tables**
+4. Right-click a table → **View/Edit Data → All Rows**
+
+**`psql` via Docker**
+
+```bash
+docker exec -it prahari-db-1 psql -U prahari -d prahari
+```
+
+```sql
+\dt
+SELECT * FROM zones;
+SELECT * FROM risk_instances LIMIT 10;
+```
+
+**`psql` on your machine** (if PostgreSQL client tools are installed)
+
+```bash
+psql -h localhost -p 5433 -U prahari -d prahari
+```
+
+#### Teammates / friends
+
+1. Clone or copy this repo  
+2. Repeat **Steps A–B** on their laptop  
+3. Use **Step C** to inspect tables  
+
+They get the same **schema + seed data**. Demo runtime rows (risks after “Load Coke-Oven Demo”) appear only after they run the app demo themselves.
+
+### 2. Backend (Python/FastAPI)
+
+```bash
+cd backend
 uvicorn app.main:app --reload --port 8000
 ```
 
 API docs: http://localhost:8000/docs
 
-### Frontend (React/TypeScript/Tailwind)
+Persistence: risk instances, sensor readings (Timescale hypertable), permits, evidence, audit, and emergencies are stored in Postgres. `PrahariState` keeps a cache + replay/websocket orchestration only.
+
+### 3. Frontend (React/TypeScript/Tailwind)
 
 ```bash
 cd frontend
@@ -79,9 +164,31 @@ App: http://localhost:5173
 
 ## Tech Stack
 
-- **Backend:** FastAPI, Pydantic, statsmodels (Holt forecasting), JWT auth
+- **Backend:** FastAPI, Pydantic, SQLAlchemy 2.0 async + asyncpg, Alembic, JWT auth
+- **LLM (P4):** OpenAI-compatible client — Groq free tier (primary) → Ollama local (fallback) → mock
+- **Database:** PostgreSQL 16 + TimescaleDB (`sensor_readings`, `audit_log` hypertables); embeddings as JSONB (pgvector-ready for Phase 4)
 - **Frontend:** React 18, TypeScript, Tailwind CSS, Vite
 - **Design:** Dark control-room theme per PRD §18
+
+## Multi-Agent LLM setup (P4)
+
+Agents run **only after** a risk is flagged (slow lane). Motif/CRS detection stays deterministic (no LLM).
+
+```bash
+# backend/.env
+LLM_PROVIDER=auto          # mock | groq | ollama | auto
+GROQ_API_KEY=gsk_...       # from https://console.groq.com/keys
+OLLAMA_MODEL=llama3.1:8b   # after: ollama pull llama3.1:8b
+```
+
+| Provider | When |
+|----------|------|
+| `auto` | Groq if key set → else Ollama → else mock |
+| `groq` | Groq, falls back to Ollama on failure |
+| `ollama` | Local only (`http://localhost:11434/v1`) |
+| `mock` | Template-like JSON — tests / offline CI |
+
+Pipeline: Sensor → Permit → Equipment → Compliance → Planner. Outputs land in `agent_findings` (model, latency_ms, raw JSON).
 
 ## API Endpoints
 
