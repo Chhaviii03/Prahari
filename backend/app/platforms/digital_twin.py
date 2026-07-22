@@ -5,20 +5,10 @@ from __future__ import annotations
 from datetime import datetime
 
 from app.models.schemas import PlantTopology, ZoneState
-
-
-PLANT_ZONES = [
-    {"zone_id": "C-10", "name": "Coke Oven Battery A", "zone_class": "PROCESS", "geo": {"x": 80, "y": 60, "level": "G"}},
-    {"zone_id": "C-11", "name": "Coke Oven Battery B", "zone_class": "PROCESS", "geo": {"x": 120, "y": 60, "level": "G"}},
-    {"zone_id": "C-12", "name": "Gas Line Maintenance Zone", "zone_class": "CONFINED_SPACE", "geo": {"x": 160, "y": 90, "level": "G"}},
-    {"zone_id": "C-13", "name": "Melt Shop Entry", "zone_class": "PROCESS", "geo": {"x": 200, "y": 120, "level": "G"}},
-    {"zone_id": "C-14", "name": "Storage Yard", "zone_class": "OPEN", "geo": {"x": 60, "y": 140, "level": "G"}},
-    {"zone_id": "C-15", "name": "Control Room Annex", "zone_class": "ADMIN", "geo": {"x": 240, "y": 50, "level": "G"}},
-]
+from app.seed.loader import seed_data
 
 
 def _linear_forecast(values: list[float], steps: int = 24) -> tuple[list[float], int | None]:
-    """Simple linear extrapolation (Holt-style, explainable)."""
     if len(values) < 2:
         v = values[-1] if values else 0
         return [v], None
@@ -44,15 +34,17 @@ def _linear_forecast(values: list[float], steps: int = 24) -> tuple[list[float],
 
 
 class DigitalTwin:
-    def __init__(self, plant_id: str = "vsp_1", plant_name: str = "Visakhapatnam Steel Plant"):
-        self.plant_id = plant_id
-        self.plant_name = plant_name
+    def __init__(self, plant_id: str | None = None, plant_name: str | None = None):
+        plant = seed_data.plant
+        self.plant_id = plant_id or plant.get("plant_id", "vsp_1")
+        self.plant_name = plant_name or plant.get("plant_name", "Plant")
+        self.evacuation_routes = plant.get("evacuation_routes", [])
         self.zones: dict[str, ZoneState] = {}
         self.history: dict[str, list[tuple[datetime, float]]] = {}
         self._init_zones()
 
     def _init_zones(self) -> None:
-        for z in PLANT_ZONES:
+        for z in seed_data.plant.get("zones", []):
             self.zones[z["zone_id"]] = ZoneState(
                 zone_id=z["zone_id"],
                 name=z["name"],
@@ -114,8 +106,8 @@ class DigitalTwin:
                 workers.append({
                     "worker_id": f"W-{zone.zone_id}-{i+1}",
                     "zone_id": zone.zone_id,
-                    "x": zone.geo.get("x", 0) + (i * 8),
-                    "y": zone.geo.get("y", 0) + 10,
+                    "x": zone.geo.get("x", 0) - 12 + (i * 10),
+                    "y": zone.geo.get("y", 0) + 6,
                     "name": f"Worker {i+1}",
                 })
             for p in zone.active_permits:
@@ -128,7 +120,5 @@ class DigitalTwin:
             "zones": list(self.zones.values()),
             "workers": workers,
             "permits": permits,
-            "evacuation_routes": [
-                {"from_zone": "C-12", "route": [{"x": 160, "y": 90}, {"x": 140, "y": 60}, {"x": 100, "y": 40}]},
-            ],
+            "evacuation_routes": self.evacuation_routes,
         }

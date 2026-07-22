@@ -19,6 +19,9 @@ from app.models.schemas import (
 )
 
 
+from app.seed.loader import seed_data
+
+
 @dataclass
 class Motif:
     motif_id: str
@@ -30,53 +33,28 @@ class Motif:
     hazard_icons: list[str]
 
 
-MOTIFS: dict[str, Motif] = {
-    "CS-HOTWORK-GAS": Motif(
-        motif_id="CS-HOTWORK-GAS",
-        version="v3",
-        name="Gas + Hot Work + Confined Space",
-        description="Rising combustible gas with active hot-work and confined-space entry",
-        severity=0.95,
-        required_signals=["rising_gas", "hot_work_permit", "confined_space"],
-        hazard_icons=["gas", "hotwork", "confined"],
-    ),
-    "MAINT-GAS-OCCUPIED": Motif(
-        motif_id="MAINT-GAS-OCCUPIED",
-        version="v2",
-        name="Maintenance + Rising Gas + Occupied Zone",
-        description="Scheduled maintenance with rising combustible gas and workers in zone",
-        severity=0.92,
-        required_signals=["rising_gas", "maintenance_active", "occupancy"],
-        hazard_icons=["gas", "maintenance", "workers"],
-    ),
-    "HOTWORK-PERMIT-CONFLICT": Motif(
-        motif_id="HOTWORK-PERMIT-CONFLICT",
-        version="v1",
-        name="Simultaneous Operations Conflict",
-        description="Conflicting permits in same zone with hazardous conditions",
-        severity=0.75,
-        required_signals=["hot_work_permit", "confined_space", "permit_conflict"],
-        hazard_icons=["hotwork", "confined"],
-    ),
-    "PPE-GAS-ENTRY": Motif(
-        motif_id="PPE-GAS-ENTRY",
-        version="v1",
-        name="PPE Missing + Rising Gas + Entry",
-        description="Worker without PPE in zone with rising gas during confined entry",
-        severity=0.85,
-        required_signals=["ppe_missing", "rising_gas", "confined_space"],
-        hazard_icons=["ppe", "gas", "confined"],
-    ),
-    "EQUIP-FAULT-GAS": Motif(
-        motif_id="EQUIP-FAULT-GAS",
-        version="v1",
-        name="Equipment Fault + Gas Rise",
-        description="Equipment maintenance flag with rising gas readings",
-        severity=0.80,
-        required_signals=["equipment_fault", "rising_gas"],
-        hazard_icons=["equipment", "gas"],
-    ),
-}
+def _load_motifs() -> dict[str, Motif]:
+    return {
+        m["motif_id"]: Motif(
+            motif_id=m["motif_id"],
+            version=m["version"],
+            name=m["name"],
+            description=m["description"],
+            severity=m["severity"],
+            required_signals=m["required_signals"],
+            hazard_icons=m["hazard_icons"],
+        )
+        for m in seed_data.motifs
+    }
+
+
+MOTIFS: dict[str, Motif] = _load_motifs()
+
+
+def reload_motifs() -> None:
+    global MOTIFS
+    seed_data.reload()
+    MOTIFS = _load_motifs()
 
 
 def crs_band(score: float) -> CRSBand:
@@ -115,7 +93,11 @@ def evaluate_zone(zone: ZoneState, maintenance_active: bool = False, equipment_f
     """Evaluate all motifs against zone state. Returns list of (motif, crs, signals, lead_time)."""
     results: list[tuple[Motif, CRS, list[ContributingSignal], int | None]] = []
 
-    rising_gas = zone.ch4_lel > 2 or (zone.forecast_eta_minutes is not None and zone.forecast_eta_minutes < 120)
+    rising_gas = (
+        zone.ch4_lel > 2
+        or zone.h2s_ppm > 5
+        or (zone.forecast_eta_minutes is not None and zone.forecast_eta_minutes < 120)
+    )
     hot_work = any("HOTWORK" in p or "HOT-WORK" in p.upper() for p in zone.active_permits)
     confined_active = any("CONFINED" in p.upper() for p in zone.active_permits)
     confined_scheduled = any("CONFINED" in p.upper() for p in zone.scheduled_permits)

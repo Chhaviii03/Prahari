@@ -1,0 +1,49 @@
+{
+  "motifs": [
+    {
+      "motif_id": "CS-HOTWORK-GAS",
+      "version": "v3",
+      "name": "Gas + Hot Work + Confined Space",
+      "description": "Rising combustible gas with active hot-work and confined-space entry",
+      "severity": 0.95,
+      "required_signals": ["rising_gas", "hot_work_permit", "confined_space"],
+      "hazard_icons": ["gas", "hotwork", "confined"]
+    },
+    {
+      "motif_id": "MAINT-GAS-OCCUPIED",
+      "version": "v2",
+      "name": "Maintenance + Rising Gas + Occupied Zone",
+      "description": "Scheduled maintenance with rising combustible gas and workers in zone",
+      "severity": 0.92,
+      "required_signals": ["rising_gas", "maintenance_active", "occupancy"],
+      "hazard_icons": ["gas", "maintenance", "workers"]
+    },
+    {
+      "motif_id": "HOTWORK-PERMIT-CONFLICT",
+      "version": "v1",
+      "name": "Simultaneous Operations Conflict",
+      "description": "Conflicting permits in same zone with hazardous conditions",
+      "severity": 0.75,
+      "required_signals": ["hot_work_permit", "confined_space", "permit_conflict"],
+      "hazard_icons": ["hotwork", "confined"]
+    },
+    {
+      "motif_id": "PPE-GAS-ENTRY",
+      "version": "v1",
+      "name": "PPE Missing + Rising Gas + Entry",
+      "description": "Worker without PPE in zone with rising gas during confined entry",
+      "severity": 0.85,
+      "required_signals": ["ppe_missing", "rising_gas", "confined_space"],
+      "hazard_icons": ["ppe", "gas", "confined"]
+    },
+    {
+      "motif_id": "EQUIP-FAULT-GAS",
+      "version": "v1",
+      "name": "Equipment Fault + Gas Rise",
+      "description": "Equipment maintenance flag with rising gas readings",
+      "severity": 0.80,
+      "required_signals": ["equipment_fault", "rising_gas"],
+      "hazard_icons": ["equipment", "gas"]
+    }
+  ]
+}

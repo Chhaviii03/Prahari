@@ -1,18 +1,31 @@
 import { NavLink } from 'react-router-dom';
-import { Shield, LayoutDashboard, Map, BarChart3, Smartphone, LogOut } from 'lucide-react';
+import { Shield, LogOut, Wifi, WifiOff } from 'lucide-react';
 import type { User } from '../types';
+import { navForRole } from '../config/nav';
+import { useWebSocket } from '../hooks/useWebSocket';
 
-const nav = [
-  { to: '/', label: 'Safety Dashboard', icon: LayoutDashboard },
-  { to: '/heatmap', label: 'Geospatial Heatmap', icon: Map },
-  { to: '/scorecard', label: 'Demo Scorecard', icon: BarChart3 },
-  { to: '/mobile', label: 'Worker Mobile', icon: Smartphone },
-];
+export function Layout({
+  children,
+  user,
+  onLogout,
+  onRealtimeEvent,
+}: {
+  children: React.ReactNode;
+  user: User | null;
+  onLogout: () => void;
+  onRealtimeEvent?: () => void;
+}) {
+  const { connected, reconnecting } = useWebSocket((event) => {
+    if (event.type === 'risk_updated' || event.type === 'emergency' || event.type === 'replay_step') {
+      onRealtimeEvent?.();
+    }
+  });
 
-export function Layout({ children, user, onLogout }: { children: React.ReactNode; user: User | null; onLogout: () => void }) {
+  const items = user ? navForRole(user.role) : [];
+
   return (
     <div className="min-h-screen flex bg-bg-base">
-      <aside className="w-56 bg-bg-surface border-r border-gray-800 flex flex-col">
+      <aside className="w-56 bg-bg-surface border-r border-gray-800 flex flex-col shrink-0">
         <div className="p-4 border-b border-gray-800">
           <div className="flex items-center gap-2">
             <Shield className="text-accent" size={24} />
@@ -22,8 +35,8 @@ export function Layout({ children, user, onLogout }: { children: React.ReactNode
             </div>
           </div>
         </div>
-        <nav className="flex-1 p-2 space-y-0.5">
-          {nav.map(({ to, label, icon: Icon }) => (
+        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+          {items.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -35,15 +48,22 @@ export function Layout({ children, user, onLogout }: { children: React.ReactNode
               }
             >
               <Icon size={16} />
-              {label}
+              <span className="truncate">{label}</span>
             </NavLink>
           ))}
         </nav>
         {user && (
           <div className="p-3 border-t border-gray-800">
+            <div className="flex items-center gap-1 text-[10px] mb-2">
+              {connected ? (
+                <><Wifi size={10} className="text-sev-ok" /><span className="text-sev-ok">Live</span></>
+              ) : (
+                <><WifiOff size={10} className="text-sev-active" /><span className="text-sev-active">{reconnecting ? 'Reconnecting…' : 'Offline'}</span></>
+              )}
+            </div>
             <div className="text-xs text-text-secondary">Signed in as</div>
             <div className="text-sm font-medium truncate">{user.name}</div>
-            <div className="text-[10px] text-text-secondary capitalize">{user.role.replace('_', ' ')}</div>
+            <div className="text-[10px] text-text-secondary capitalize">{user.role.replace(/_/g, ' ')}</div>
             <button onClick={onLogout} className="mt-2 flex items-center gap-1 text-xs text-text-secondary hover:text-sev-critical">
               <LogOut size={12} /> Sign out
             </button>

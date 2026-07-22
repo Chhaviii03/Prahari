@@ -1,0 +1,11 @@
+{
+  "users": [
+    { "username": "safety", "password": "prahari", "role": "safety_officer", "name": "Rajesh Kumar", "user_id": "u1" },
+    { "username": "permit", "password": "prahari", "role": "permit_officer", "name": "Priya Sharma", "user_id": "u2" },
+    { "username": "supervisor", "password": "prahari", "role": "supervisor", "name": "Vikram Singh", "user_id": "u3", "zone_id": "C-12" },
+    { "username": "compliance", "password": "prahari", "role": "compliance_officer", "name": "Anita Reddy", "user_id": "u4" },
+    { "username": "executive", "password": "prahari", "role": "executive", "name": "Dr. Mehta", "user_id": "u5" },
+    { "username": "worker", "password": "prahari", "role": "worker", "name": "Suresh Patel", "user_id": "u6", "zone_id": "C-12" },
+    { "username": "admin", "password": "prahari", "role": "admin", "name": "System Admin", "user_id": "u7" }
+  ]
+}

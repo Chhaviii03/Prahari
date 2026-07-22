@@ -1,0 +1,8 @@
+{
+  "active_scenario": "coke-oven",
+  "plant_file": "plant.json",
+  "motifs_file": "motifs.json",
+  "users_file": "users.json",
+  "regulatory_file": "regulatory.json",
+  "incidents_file": "incidents.json"
+}

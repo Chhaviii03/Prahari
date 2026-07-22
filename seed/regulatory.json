@@ -1,0 +1,24 @@
+{
+  "citations": [
+    {
+      "framework": "OISD",
+      "ref": "OISD-GDN-105 §7.2",
+      "text": "Hot work shall not be carried out in or near confined spaces where flammable gas may be present."
+    },
+    {
+      "framework": "FACTORY_ACT",
+      "ref": "§36",
+      "text": "No person shall enter a confined space unless adequate precautions have been taken for safety."
+    },
+    {
+      "framework": "DGMS",
+      "ref": "Circular 2019/03",
+      "text": "Simultaneous operations in hazardous zones require documented risk assessment and permit coordination."
+    },
+    {
+      "framework": "OISD",
+      "ref": "OISD-RP-117 §4.1",
+      "text": "Combustible gas concentrations above 10% LEL require immediate area isolation and ventilation."
+    }
+  ]
+}

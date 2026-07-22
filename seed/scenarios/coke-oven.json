@@ -1,0 +1,137 @@
+{
+  "id": "coke-oven",
+  "name": "Coke-Oven Gas + Maintenance (§6.4)",
+  "description": "Bhilai/Clairton class: maintenance + rising combustible gas + workers in zone. Every single sensor stays under its own threshold.",
+  "zone_id": "C-12",
+  "load_at_offset_minutes": -40,
+  "duration_minutes": 120,
+  "scorecard": {
+    "fnr_reduction_pct": 58.0,
+    "precision": 0.83,
+    "recall": 0.91,
+    "baseline_recall": 0.41,
+    "regulatory_citations": ["OISD-GDN-105 §7.2", "Factory Act §36"]
+  },
+  "events": [
+    {
+      "offset_minutes": -110,
+      "description": "CH₄ drifting up (~2-4% LEL); SCADA silent",
+      "updates": { "ch4_lel": 2.5, "maintenance_active": false, "occupancy": 0 },
+      "baseline_alert": false,
+      "prahari_alert": true,
+      "prahari_crs": 35,
+      "prahari_motif": "MAINT-GAS-OCCUPIED"
+    },
+    {
+      "offset_minutes": -75,
+      "description": "Scheduled maintenance job active in-zone",
+      "updates": {
+        "ch4_lel": 4.2,
+        "maintenance_active": true,
+        "active_permits": ["PTW-2231-HOTWORK"],
+        "occupancy": 0
+      },
+      "baseline_alert": false,
+      "prahari_alert": true,
+      "prahari_crs": 58,
+      "prahari_motif": "MAINT-GAS-OCCUPIED"
+    },
+    {
+      "offset_minutes": -40,
+      "description": "Crew in zone; CH₄ ~8% LEL — still under 10% alarm",
+      "updates": {
+        "ch4_lel": 8.0,
+        "maintenance_active": true,
+        "active_permits": ["PTW-2231-HOTWORK"],
+        "scheduled_permits": ["PTW-2240-CONFINED_ENTRY"],
+        "occupancy": 3,
+        "equipment_fault": true
+      },
+      "baseline_alert": false,
+      "prahari_alert": true,
+      "prahari_crs": 86,
+      "prahari_motif": "CS-HOTWORK-GAS"
+    },
+    {
+      "offset_minutes": -10,
+      "description": "Gas approaching flammable range; no coordinated response",
+      "updates": {
+        "ch4_lel": 15.0,
+        "maintenance_active": true,
+        "active_permits": ["PTW-2231-HOTWORK"],
+        "scheduled_permits": ["PTW-2240-CONFINED_ENTRY"],
+        "occupancy": 3,
+        "equipment_fault": true
+      },
+      "baseline_alert": false,
+      "prahari_alert": true,
+      "prahari_crs": 92,
+      "prahari_motif": "CS-HOTWORK-GAS"
+    },
+    {
+      "offset_minutes": 0,
+      "description": "T-0: Ignition → explosion (without intervention)",
+      "updates": {
+        "ch4_lel": 45.0,
+        "maintenance_active": true,
+        "active_permits": ["PTW-2231-HOTWORK"],
+        "scheduled_permits": ["PTW-2240-CONFINED_ENTRY"],
+        "occupancy": 3
+      },
+      "baseline_alert": true,
+      "prahari_alert": true,
+      "prahari_crs": 98,
+      "prahari_motif": "CS-HOTWORK-GAS"
+    }
+  ],
+  "evidence": {
+    "sensor_id": "SEN-CH4-C12-03",
+    "equipment_id": "E-441",
+    "work_order": "CMMS-WO-8841",
+    "hotwork_permit": "PTW-2231",
+    "confined_permit": "PTW-2240",
+    "compliance_refs": "OISD-GDN-105 §7.2, Factory Act §36",
+    "narrative_template": "Compound hazard in {zone_id}: rising CH₄ ({ch4_lel}% LEL) forecast to cross LEL threshold in ~{eta} min, overlapping active hot-work permit and scheduled confined-space entry. {occupancy} workers exposed. Equipment {equipment_id} has open maintenance flag. Regulatory violation: {compliance_refs}.",
+    "agent_templates": {
+      "sensor": "CH₄ at {ch4_lel}% LEL, rising ~{rise_rate}% LEL per 10 min. On track to LEL in ~{eta} min. Sensor {sensor_id} healthy.",
+      "permit": "Hot-work {hotwork_permit} active; confined-entry {confined_permit} scheduled — conflicting simultaneous operations.",
+      "worker": "{occupancy} workers assigned to confined-space entry in {zone_id}.",
+      "equipment": "{equipment_id} valve flagged in {work_order}, 9 days ago. Possible seepage source.",
+      "compliance": "Implicates {compliance_refs}."
+    },
+    "root_cause_hypotheses": [
+      {
+        "rank": 1,
+        "hypothesis": "Valve seepage on {equipment_id} (maintenance flag T-9d)",
+        "confidence": 0.78,
+        "citations": ["{work_order}", "{sensor_id} trend"]
+      },
+      {
+        "rank": 2,
+        "hypothesis": "Incomplete gas line isolation during maintenance prep",
+        "confidence": 0.65,
+        "citations": ["{hotwork_permit} scope", "INC-2018-BHILAI precedent"]
+      }
+    ],
+    "recommendations": [
+      {
+        "action": "Revoke hot-work permit {hotwork_permit}; purge {zone_id} before entry",
+        "crs_reduction": 65,
+        "citation": ["OISD-GDN-105 §7.2", "Factory Act §36"]
+      },
+      {
+        "action": "Evacuate {occupancy} workers from {zone_id}; initiate forced ventilation",
+        "crs_reduction": 55,
+        "citation": ["OISD-RP-117 §4.1"]
+      },
+      {
+        "action": "Inspect {equipment_id} valve; hold maintenance until gas levels <1% LEL",
+        "crs_reduction": 60,
+        "citation": ["{work_order}"]
+      }
+    ],
+    "confidence": { "overall": 0.83, "retrieval": 0.88, "root_cause": 0.78 },
+    "regulatory_refs_count": 2,
+    "historical_refs_count": 2
+  }
+}

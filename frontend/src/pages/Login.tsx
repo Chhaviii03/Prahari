@@ -1,13 +1,17 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Shield } from 'lucide-react';
 import { api } from '../api';
+import { homeForRole } from '../config/nav';
 import type { User } from '../types';
 
 const DEMO_ACCOUNTS = [
-  { username: 'safety', label: 'Safety Officer', role: 'Primary user' },
-  { username: 'permit', label: 'Permit Officer', role: 'Permit conflicts' },
+  { username: 'safety', label: 'Safety Officer', role: 'Dashboard home' },
+  { username: 'permit', label: 'Permit Officer', role: 'Permit Intelligence' },
+  { username: 'compliance', label: 'Compliance Officer', role: 'Reports Library' },
   { username: 'executive', label: 'Executive', role: 'KPI roll-up' },
   { username: 'worker', label: 'Worker', role: 'Mobile view' },
+  { username: 'admin', label: 'Admin', role: 'User management' },
 ];
 
 export function Login({ onLogin }: { onLogin: (user: User, token: string) => void }) {
@@ -15,6 +19,7 @@ export function Login({ onLogin }: { onLogin: (user: User, token: string) => voi
   const [password, setPassword] = useState('prahari');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +28,9 @@ export function Login({ onLogin }: { onLogin: (user: User, token: string) => voi
     try {
       const res = await api.login(username, password);
       onLogin(res.user, res.access_token);
+      const home = homeForRole(res.user.role);
+      if (res.user.role === 'worker') navigate('/mobile');
+      else navigate(home);
     } catch {
       setError('Invalid credentials');
     } finally {

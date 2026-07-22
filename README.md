@@ -16,7 +16,14 @@ PRAHARI sits above plant systems and fuses sensor, permit, maintenance, and work
 4. **Evidence packages** — Cited regulations (OISD, Factory Act), historical precedent, counterfactual-scored recommendations
 5. **Demo scorecard** — Side-by-side comparison vs single-sensor SCADA baseline
 
-## Quick Start
+## Seed data (edit without touching code)
+
+All demo content is in the **`seed/`** folder as JSON files. See [`seed/README.md`](seed/README.md) for full docs.
+
+- Change scenario timeline → edit `seed/scenarios/coke-oven.json`
+- Switch scenarios → set `"active_scenario"` in `seed/config.json` or `POST /v1/demo/load-scenario?scenario=h2s-leak`
+- Reload after edits → `POST /v1/demo/reload-seed` (or restart backend)
+
 
 ### Backend (Python/FastAPI)
 

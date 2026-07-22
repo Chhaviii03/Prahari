@@ -8,144 +8,95 @@ import uuid
 from app.models.schemas import (
     AgentEnrichment,
     EvidencePackage,
-    HistoricalReference,
     Recommendation,
-    RegulatoryCitation,
     RiskInstance,
     RootCauseHypothesis,
     ZoneState,
 )
+from app.seed.loader import seed_data
 
 
-REGULATORY_CORPUS = [
-    RegulatoryCitation(
-        framework="OISD",
-        ref="OISD-GDN-105 §7.2",
-        text="Hot work shall not be carried out in or near confined spaces where flammable gas may be present.",
-    ),
-    RegulatoryCitation(
-        framework="FACTORY_ACT",
-        ref="§36",
-        text="No person shall enter a confined space unless adequate precautions have been taken for safety.",
-    ),
-    RegulatoryCitation(
-        framework="DGMS",
-        ref="Circular 2019/03",
-        text="Simultaneous operations in hazardous zones require documented risk assessment and permit coordination.",
-    ),
-    RegulatoryCitation(
-        framework="OISD",
-        ref="OISD-RP-117 §4.1",
-        text="Combustible gas concentrations above 10% LEL require immediate area isolation and ventilation.",
-    ),
-]
+def _template_vars(zone: ZoneState, evidence_cfg: dict) -> dict[str, str | int | float]:
+    eta = int(zone.forecast_eta_minutes or 0)
+    return {
+        "zone_id": zone.zone_id,
+        "ch4_lel": zone.ch4_lel,
+        "h2s_ppm": zone.h2s_ppm,
+        "co_ppm": zone.co_ppm,
+        "occupancy": zone.occupancy,
+        "eta": eta,
+        "rise_rate": round(zone.ch4_lel / 10, 1) if zone.ch4_lel else 0,
+        "sensor_id": evidence_cfg.get("sensor_id", "SEN-UNKNOWN"),
+        "equipment_id": evidence_cfg.get("equipment_id", "E-000"),
+        "work_order": evidence_cfg.get("work_order", "CMMS-WO-0000"),
+        "hotwork_permit": evidence_cfg.get("hotwork_permit", "PTW-0000"),
+        "confined_permit": evidence_cfg.get("confined_permit", "PTW-0000"),
+        "compliance_refs": evidence_cfg.get("compliance_refs", ""),
+    }
 
-HISTORICAL_INCIDENTS = [
-    HistoricalReference(
-        incident_id="INC-2024-0142",
-        similarity=0.91,
-        summary="Near-miss: hot work near confined space with gas ingress, Zone B-7, 2024",
-    ),
-    HistoricalReference(
-        incident_id="INC-2018-BHILAI",
-        similarity=0.94,
-        summary="SAIL Bhilai coke-oven gas pipeline explosion during maintenance (9 dead, 14 injured)",
-    ),
-    HistoricalReference(
-        incident_id="INC-2025-CLAIRTON",
-        similarity=0.89,
-        summary="US Steel Clairton coke-oven gas buildup during maintenance prep (2 dead)",
-    ),
-]
+
+def _fmt(template: str, vars: dict) -> str:
+    try:
+        return template.format(**vars)
+    except KeyError:
+        return template
 
 
 def enrich_risk(risk: RiskInstance, zone: ZoneState) -> AgentEnrichment:
-    ch4 = zone.ch4_lel
-    eta = zone.forecast_eta_minutes
+    evidence_cfg = seed_data.active_scenario.evidence
+    vars = _template_vars(zone, evidence_cfg)
 
-    sensor_finding = (
-        f"CH₄ at {ch4:.1f}% LEL, rising ~{(ch4/10):.1f}% LEL per 10 min. "
-        f"{'On track to LEL in ~' + str(int(eta)) + ' min' if eta else 'Trend monitoring active'}. Sensor SEN-CH4-C12-03 healthy."
-    )
-
-    permit_finding = (
-        f"Hot-work {', '.join(p for p in zone.active_permits if 'HOT' in p.upper()) or 'PTW-2231'} active; "
-        f"confined-entry {', '.join(p for p in zone.scheduled_permits if 'CONFINED' in p.upper()) or 'PTW-2240'} scheduled — conflicting simultaneous operations."
-    )
-
-    worker_finding = f"{zone.occupancy} workers assigned to confined-space entry in {zone.zone_id}."
-
-    equipment_finding = "E-441 valve flagged in CMMS WO-8841, 9 days ago. Possible seepage source."
-
-    compliance_finding = "Implicates OISD-GDN-105 §7.2 (hot work near confined space); Factory Act §36 (confined space entry)."
-
-    narrative = (
-        f"Compound hazard in {zone.zone_id}: rising CH₄ ({ch4:.1f}% LEL) forecast to cross LEL threshold "
-        f"in ~{int(eta or 0)} min, overlapping active hot-work permit and scheduled confined-space entry. "
-        f"{zone.occupancy} workers exposed. Equipment E-441 has open maintenance flag. "
-        f"Regulatory violation: OISD-GDN-105 §7.2, Factory Act §36."
-    )
+    narrative = _fmt(evidence_cfg.get("narrative_template", ""), vars)
+    agent_templates = evidence_cfg.get("agent_templates", {})
+    per_agent = {agent: _fmt(text, vars) for agent, text in agent_templates.items()}
+    if "planner" not in per_agent:
+        per_agent["planner"] = narrative
 
     return AgentEnrichment(
         risk_id=risk.risk_id,
         narrative=narrative,
-        per_agent_findings={
-            "sensor": sensor_finding,
-            "permit": permit_finding,
-            "worker": worker_finding,
-            "equipment": equipment_finding,
-            "compliance": compliance_finding,
-            "planner": narrative,
-        },
+        per_agent_findings=per_agent,
         trace_ref=f"langfuse://trace/{uuid.uuid4().hex[:12]}",
     )
 
 
 def build_evidence_package(risk: RiskInstance, zone: ZoneState, enrichment: AgentEnrichment) -> EvidencePackage:
-    projected_after = max(15, risk.crs.score - 65)
+    evidence_cfg = seed_data.active_scenario.evidence
+    vars = _template_vars(zone, evidence_cfg)
+
+    root_causes = [
+        RootCauseHypothesis(
+            rank=h["rank"],
+            hypothesis=_fmt(h["hypothesis"], vars),
+            confidence=h["confidence"],
+            citations=[_fmt(c, vars) for c in h["citations"]],
+        )
+        for h in evidence_cfg.get("root_cause_hypotheses", [])
+    ]
+
+    recommendations = [
+        Recommendation(
+            action=_fmt(r["action"], vars),
+            projected_crs_after=max(15, risk.crs.score - r.get("crs_reduction", 65)),
+            counterfactual_ran=True,
+            citation=r.get("citation", []),
+        )
+        for r in evidence_cfg.get("recommendations", [])
+    ]
+
+    reg_count = evidence_cfg.get("regulatory_refs_count", 2)
+    hist_count = evidence_cfg.get("historical_refs_count", 2)
 
     return EvidencePackage(
         evidence_id=f"EP-{risk.risk_id[3:]}",
         risk_id=risk.risk_id,
         risk_summary=enrichment.narrative,
-        root_cause_hypotheses=[
-            RootCauseHypothesis(
-                rank=1,
-                hypothesis="Valve seepage on E-441 (maintenance flag T-9d)",
-                confidence=0.78,
-                citations=["CMMS-WO-8841", "SEN-CH4-C12-03 trend"],
-            ),
-            RootCauseHypothesis(
-                rank=2,
-                hypothesis="Incomplete gas line isolation during maintenance prep",
-                confidence=0.65,
-                citations=["PTW-2231 scope", "INC-2018-BHILAI precedent"],
-            ),
-        ],
-        recommendations=[
-            Recommendation(
-                action="Revoke hot-work permit PTW-2231; purge C-12 before entry",
-                projected_crs_after=projected_after,
-                counterfactual_ran=True,
-                citation=["OISD-GDN-105 §7.2", "Factory Act §36"],
-            ),
-            Recommendation(
-                action="Evacuate 3 workers from C-12; initiate forced ventilation",
-                projected_crs_after=projected_after + 10,
-                counterfactual_ran=True,
-                citation=["OISD-RP-117 §4.1"],
-            ),
-            Recommendation(
-                action="Inspect E-441 valve; hold maintenance until gas levels <1% LEL",
-                projected_crs_after=projected_after + 5,
-                counterfactual_ran=True,
-                citation=["CMMS-WO-8841"],
-            ),
-        ],
-        regulatory_citations=REGULATORY_CORPUS[:2],
-        historical_references=HISTORICAL_INCIDENTS[:2],
+        root_cause_hypotheses=root_causes,
+        recommendations=recommendations,
+        regulatory_citations=seed_data.regulatory_corpus[:reg_count],
+        historical_references=seed_data.historical_incidents[:hist_count],
         agent_reasoning_trace=enrichment.trace_ref,
         agent_findings=enrichment.per_agent_findings,
-        confidence={"overall": 0.83, "retrieval": 0.88, "root_cause": 0.78},
+        confidence=evidence_cfg.get("confidence", {"overall": 0.83, "retrieval": 0.88, "root_cause": 0.78}),
         assembled_at=datetime.utcnow(),
     )

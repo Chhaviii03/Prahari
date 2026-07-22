@@ -1,0 +1,91 @@
+{
+  "id": "h2s-leak",
+  "name": "H₂S Leak + Electrical Work (Example)",
+  "description": "Example alternate scenario: rising H₂S during electrical maintenance. Edit this file to showcase different hazards.",
+  "zone_id": "C-13",
+  "load_at_offset_minutes": -30,
+  "duration_minutes": 90,
+  "scorecard": {
+    "fnr_reduction_pct": 52.0,
+    "precision": 0.80,
+    "recall": 0.88,
+    "baseline_recall": 0.38,
+    "regulatory_citations": ["OISD-RP-117 §4.1", "DGMS Circular 2019/03"]
+  },
+  "events": [
+    {
+      "offset_minutes": -60,
+      "description": "H₂S drifting up (~6 ppm); below 10 ppm alarm",
+      "updates": { "h2s_ppm": 6.0, "maintenance_active": false, "occupancy": 0 },
+      "baseline_alert": false,
+      "prahari_alert": true,
+      "prahari_crs": 32,
+      "prahari_motif": "MAINT-GAS-OCCUPIED"
+    },
+    {
+      "offset_minutes": -30,
+      "description": "Electrical work active; H₂S at 9 ppm with 2 workers",
+      "updates": {
+        "h2s_ppm": 9.0,
+        "ch4_lel": 1.5,
+        "maintenance_active": true,
+        "active_permits": ["PTW-3301-ELECTRICAL"],
+        "occupancy": 2,
+        "equipment_fault": true
+      },
+      "baseline_alert": false,
+      "prahari_alert": true,
+      "prahari_crs": 78,
+      "prahari_motif": "EQUIP-FAULT-GAS"
+    },
+    {
+      "offset_minutes": 0,
+      "description": "H₂S crosses 10 ppm threshold — SCADA finally alerts",
+      "updates": {
+        "h2s_ppm": 12.0,
+        "ch4_lel": 2.0,
+        "maintenance_active": true,
+        "active_permits": ["PTW-3301-ELECTRICAL"],
+        "occupancy": 2
+      },
+      "baseline_alert": true,
+      "prahari_alert": true,
+      "prahari_crs": 85,
+      "prahari_motif": "EQUIP-FAULT-GAS"
+    }
+  ],
+  "evidence": {
+    "sensor_id": "SEN-H2S-C13-01",
+    "equipment_id": "E-552",
+    "work_order": "CMMS-WO-9102",
+    "hotwork_permit": "PTW-3301-ELECTRICAL",
+    "confined_permit": "N/A",
+    "compliance_refs": "OISD-RP-117 §4.1, DGMS Circular 2019/03",
+    "narrative_template": "Hazard in {zone_id}: H₂S at {h2s_ppm} ppm trending toward IDLH, overlapping electrical maintenance permit with {occupancy} workers in zone. Equipment {equipment_id} flagged in CMMS.",
+    "agent_templates": {
+      "sensor": "H₂S at {h2s_ppm} ppm, rising. Sensor {sensor_id} healthy.",
+      "permit": "Electrical work {hotwork_permit} active in {zone_id}.",
+      "worker": "{occupancy} workers in hazard zone.",
+      "equipment": "{equipment_id} flagged in {work_order}.",
+      "compliance": "Implicates {compliance_refs}."
+    },
+    "root_cause_hypotheses": [
+      {
+        "rank": 1,
+        "hypothesis": "Seal failure on {equipment_id}",
+        "confidence": 0.72,
+        "citations": ["{work_order}", "{sensor_id} trend"]
+      }
+    ],
+    "recommendations": [
+      {
+        "action": "Stop electrical work {hotwork_permit}; evacuate {zone_id}",
+        "crs_reduction": 60,
+        "citation": ["OISD-RP-117 §4.1"]
+      }
+    ],
+    "confidence": { "overall": 0.79, "retrieval": 0.85, "root_cause": 0.72 },
+    "regulatory_refs_count": 2,
+    "historical_refs_count": 1
+  }
+}

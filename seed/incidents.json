@@ -1,0 +1,19 @@
+{
+  "incidents": [
+    {
+      "incident_id": "INC-2024-0142",
+      "similarity": 0.91,
+      "summary": "Near-miss: hot work near confined space with gas ingress, Zone B-7, 2024"
+    },
+    {
+      "incident_id": "INC-2018-BHILAI",
+      "similarity": 0.94,
+      "summary": "SAIL Bhilai coke-oven gas pipeline explosion during maintenance (9 dead, 14 injured)"
+    },
+    {
+      "incident_id": "INC-2025-CLAIRTON",
+      "similarity": 0.89,
+      "summary": "US Steel Clairton coke-oven gas buildup during maintenance prep (2 dead)"
+    }
+  ]
+}

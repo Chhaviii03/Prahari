@@ -8,18 +8,9 @@ from passlib.context import CryptContext
 
 from app.config import settings
 from app.models.schemas import User, UserRole
+from app.seed.loader import seed_data
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-DEMO_USERS: dict[str, dict[str, Any]] = {
-    "safety": {"password": "prahari", "role": UserRole.SAFETY_OFFICER, "name": "Rajesh Kumar", "user_id": "u1"},
-    "permit": {"password": "prahari", "role": UserRole.PERMIT_OFFICER, "name": "Priya Sharma", "user_id": "u2"},
-    "supervisor": {"password": "prahari", "role": UserRole.SUPERVISOR, "name": "Vikram Singh", "user_id": "u3", "zone_id": "C-12"},
-    "compliance": {"password": "prahari", "role": UserRole.COMPLIANCE_OFFICER, "name": "Anita Reddy", "user_id": "u4"},
-    "executive": {"password": "prahari", "role": UserRole.EXECUTIVE, "name": "Dr. Mehta", "user_id": "u5"},
-    "worker": {"password": "prahari", "role": UserRole.WORKER, "name": "Suresh Patel", "user_id": "u6", "zone_id": "C-12"},
-    "admin": {"password": "prahari", "role": UserRole.ADMIN, "name": "System Admin", "user_id": "u7"},
-}
 
 ROLE_PERMISSIONS = {
     UserRole.SAFETY_OFFICER: {"acknowledge", "escalate", "dismiss", "emergency", "view_evidence", "view_dashboard"},
@@ -39,7 +30,7 @@ def create_token(user: User) -> str:
 
 
 def authenticate(username: str, password: str) -> User | None:
-    user_data = DEMO_USERS.get(username)
+    user_data = seed_data.users.get(username)
     if not user_data or user_data["password"] != password:
         return None
     return User(

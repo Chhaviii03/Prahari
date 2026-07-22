@@ -1,0 +1,23 @@
+{
+  "plant_id": "vsp_1",
+  "plant_name": "Visakhapatnam Steel Plant",
+  "zones": [
+    { "zone_id": "C-10", "name": "Coke Oven Battery A", "zone_class": "PROCESS", "geo": { "x": 100, "y": 55, "level": "G" } },
+    { "zone_id": "C-11", "name": "Coke Oven Battery B", "zone_class": "PROCESS", "geo": { "x": 210, "y": 55, "level": "G" } },
+    { "zone_id": "C-12", "name": "Gas Line Maintenance Zone", "zone_class": "CONFINED_SPACE", "geo": { "x": 210, "y": 130, "level": "G" } },
+    { "zone_id": "C-13", "name": "Melt Shop Entry", "zone_class": "PROCESS", "geo": { "x": 320, "y": 130, "level": "G" } },
+    { "zone_id": "C-14", "name": "Storage Yard", "zone_class": "OPEN", "geo": { "x": 80, "y": 175, "level": "G" } },
+    { "zone_id": "C-15", "name": "Control Room Annex", "zone_class": "ADMIN", "geo": { "x": 320, "y": 40, "level": "G" } }
+  ],
+  "evacuation_routes": [
+    {
+      "from_zone": "C-12",
+      "label": "Evacuation route",
+      "route": [
+        { "x": 210, "y": 130 },
+        { "x": 155, "y": 90 },
+        { "x": 100, "y": 55 }
+      ]
+    }
+  ]
+}

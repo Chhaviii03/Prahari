@@ -16,7 +16,22 @@ from app.models.schemas import (
     TriageAction,
 )
 from app.platforms.enterprise import authenticate, check_permission, create_token, decode_token
+from app.platforms.ops_api import (
+    build_analytics,
+    build_executive_dashboard,
+    build_notifications,
+    build_reports,
+    copilot_answer,
+    detect_permit_conflicts,
+    export_audit_pack,
+    get_settings,
+    list_users_admin,
+    rag_search,
+    role_home_path,
+    sync_zone_crs_from_risks,
+)
 from app.platforms.risk_engine import MOTIFS
+from app.seed.loader import seed_data
 from app.state import state
 
 app = FastAPI(title=settings.app_name, version=settings.app_version, description="Industrial Safety Intelligence Platform")
@@ -174,6 +189,83 @@ async def get_heatmap():
     return state.get_heatmap()
 
 
+@app.get("/v1/ops/permits")
+async def get_permits():
+    sync_zone_crs_from_risks(state.twin.zones, state.risk_instances)
+    return {"permits": detect_permit_conflicts(state.twin.zones)}
+
+
+@app.post("/v1/ops/permits/{permit_id}/override")
+async def override_permit(permit_id: str, body: dict, user=Depends(get_current_user)):
+    justification = body.get("justification")
+    if not justification:
+        raise HTTPException(status_code=400, detail="Justification required for permit override")
+    return state.override_permit(permit_id, justification, user.get("username", "unknown"))
+
+
+@app.get("/v1/ops/notifications")
+async def get_notifications(role: str | None = None):
+    items = build_notifications(state.risk_instances, state.emergency, state.audit_log)
+    if role:
+        items = [n for n in items if role in n.get("routes_to", []) or role == "admin"]
+    return {"items": items, "unread": sum(1 for n in items if not n.get("acknowledged"))}
+
+
+@app.get("/v1/ops/analytics")
+async def get_analytics():
+    return build_analytics(state)
+
+
+@app.get("/v1/ops/executive")
+async def get_executive():
+    return build_executive_dashboard(state)
+
+
+@app.get("/v1/ops/reports")
+async def get_reports():
+    return {"reports": build_reports(state)}
+
+
+@app.post("/v1/ops/reports/export")
+async def export_report(body: dict, user=Depends(get_current_user)):
+    risk_id = body.get("risk_id")
+    if not risk_id:
+        raise HTTPException(status_code=400, detail="risk_id required")
+    pack = export_audit_pack(risk_id, state, user.get("username", "unknown"))
+    state._audit("audit_export", user.get("username", "unknown"), {"risk_id": risk_id})
+    return pack
+
+
+@app.post("/v1/decision/copilot")
+async def copilot(body: dict):
+    question = body.get("question", "")
+    risk_id = body.get("risk_id")
+    if not question:
+        raise HTTPException(status_code=400, detail="question required")
+    return copilot_answer(question, risk_id, state)
+
+
+@app.get("/v1/decision/rag")
+async def decision_rag(query: str = "", zone: str | None = None):
+    filters = {"zone": zone} if zone else None
+    return {"results": rag_search(query, filters)}
+
+
+@app.get("/v1/admin/users")
+async def admin_users(user=Depends(get_current_user)):
+    return {"users": list_users_admin()}
+
+
+@app.get("/v1/admin/settings")
+async def admin_settings():
+    return get_settings()
+
+
+@app.get("/v1/auth/role-home")
+async def role_home(user=Depends(get_current_user)):
+    return {"home": role_home_path(user.get("role", "safety_officer"))}
+
+
 @app.post("/v1/ops/risk/{risk_id}/acknowledge")
 async def acknowledge_risk(risk_id: str, body: TriageAction, user=Depends(get_current_user)):
     if not check_permission(user.get("role", ""), "acknowledge") and user.get("role") != "safety_officer":
@@ -266,10 +358,19 @@ async def reset_demo():
 
 
 @app.post("/v1/demo/load-scenario")
-async def load_scenario():
-    state.reset_demo()
-    result = await state.step_replay(-40)
+async def load_scenario(scenario: str | None = None):
+    result = state.load_scenario(scenario)
     return {"status": "loaded", "result": result}
+
+
+@app.get("/v1/demo/scenarios")
+async def list_scenarios():
+    return seed_data.list_scenarios()
+
+
+@app.post("/v1/demo/reload-seed")
+async def reload_seed_endpoint():
+    return state.reload_seed_data()
 
 
 # --- P8 Audit ---
