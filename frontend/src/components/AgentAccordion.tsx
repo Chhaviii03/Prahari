@@ -23,7 +23,7 @@ export function AgentAccordion({ findings }: { findings: Record<string, string> 
         const Icon = meta.icon;
         const isOpen = open === key;
         return (
-          <div key={key} className="border border-gray-800 rounded-lg overflow-hidden">
+          <div key={key} className="border border-line rounded-xl overflow-hidden shadow-card">
             <button
               type="button"
               onClick={() => setOpen(isOpen ? null : key)}
@@ -33,10 +33,10 @@ export function AgentAccordion({ findings }: { findings: Record<string, string> 
                 <Icon size={14} className="text-accent" />
                 {meta.label}
               </span>
-              <ChevronDown size={14} className={`text-text-secondary transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown size={14} className={`text-ink-secondary transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
             {isOpen && (
-              <div className="px-3 py-2 text-xs text-text-secondary border-t border-gray-800 leading-relaxed">
+              <div className="px-3 py-2 text-xs text-ink-secondary border-t border-line leading-relaxed">
                 {findings[key]}
               </div>
             )}

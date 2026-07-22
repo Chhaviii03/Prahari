@@ -50,10 +50,10 @@ export function IncidentResponsePage() {
       <header className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold flex items-center gap-2">
-            <Siren className={active ? 'text-sev-critical' : 'text-text-secondary'} size={20} />
+            <Siren className={active ? 'text-sev-critical' : 'text-ink-secondary'} size={20} />
             Incident Response Workflow
           </h1>
-          <p className="text-xs text-text-secondary">
+          <p className="text-xs text-ink-secondary">
             Emergency orchestration — evacuation, notifications, evidence lock, draft report (§15.4.4, §21.2)
           </p>
         </div>
@@ -75,18 +75,18 @@ export function IncidentResponsePage() {
             <p className="text-sm mb-4">Zone {emergency?.zone_id} — full-bleed situational awareness</p>
 
             <div className="bg-bg-base rounded-lg p-4 mb-4 min-h-[200px] relative">
-              <div className="text-xs text-text-secondary mb-2 flex items-center gap-1">
+              <div className="text-xs text-ink-secondary mb-2 flex items-center gap-1">
                 <Map size={12} /> Mini-heatmap — affected zone highlighted
               </div>
               <svg viewBox="0 0 400 120" className="w-full h-32">
-                <rect width="400" height="120" fill="#0B0F14" />
-                <rect x="160" y="40" width="80" height="40" rx="4" fill={bandHex('CRITICAL')} fillOpacity="0.6" stroke="#FF3B30" strokeWidth="2" />
-                <text x="200" y="65" textAnchor="middle" fill="#F2F4F7" fontSize="12" fontWeight="bold">{emergency?.zone_id}</text>
-                <path d="M 200 80 L 200 110 L 320 110" fill="none" stroke="#FF3B30" strokeWidth="2" strokeDasharray="6 4" />
-                <text x="260" y="105" fill="#FF3B30" fontSize="8">Evacuation route</text>
-                <circle cx="185" cy="55" r="5" fill="#0A84FF" />
-                <circle cx="200" cy="58" r="5" fill="#0A84FF" />
-                <circle cx="215" cy="55" r="5" fill="#0A84FF" />
+                <rect width="400" height="120" fill="#FFFFFF" rx="8" />
+                <rect x="160" y="40" width="80" height="40" rx="4" fill={bandHex('CRITICAL')} fillOpacity="0.6" stroke="#EF4444" strokeWidth="2" />
+                <text x="200" y="65" textAnchor="middle" fill="#111827" fontSize="12" fontWeight="bold">{emergency?.zone_id}</text>
+                <path d="M 200 80 L 200 110 L 320 110" fill="none" stroke="#EF4444" strokeWidth="2" strokeDasharray="6 4" />
+                <text x="260" y="105" fill="#EF4444" fontSize="8">Evacuation route</text>
+                <circle cx="185" cy="55" r="5" fill="#F5A892" />
+                <circle cx="200" cy="58" r="5" fill="#F5A892" />
+                <circle cx="215" cy="55" r="5" fill="#F5A892" />
               </svg>
             </div>
 
@@ -103,8 +103,8 @@ export function IncidentResponsePage() {
             </div>
           </div>
 
-          <div className="col-span-4 bg-bg-surface border border-gray-800 rounded-lg p-4 overflow-y-auto">
-            <h3 className="text-xs font-medium text-text-secondary uppercase mb-3">Live Checklist</h3>
+          <div className="col-span-4 bg-bg-surface border border-line rounded-xl shadow-card p-4 overflow-y-auto">
+            <h3 className="text-xs font-medium text-ink-secondary uppercase mb-3">Live Checklist</h3>
             {(emergency?.steps || []).map((s, i) => (
               <div key={i} className="flex items-start gap-2 mb-3 text-sm">
                 {s.status === 'complete' ? (
@@ -114,14 +114,14 @@ export function IncidentResponsePage() {
                 )}
                 <div>
                   <div>{s.step}</div>
-                  <div className="text-[10px] text-text-secondary">{new Date(s.ts).toLocaleTimeString()}</div>
+                  <div className="text-[10px] text-ink-secondary">{new Date(s.ts).toLocaleTimeString()}</div>
                 </div>
               </div>
             ))}
             {emergency?.risk_id && (
               <button
                 onClick={() => navigate(`/risk/${emergency.risk_id}`)}
-                className="mt-4 w-full text-xs bg-bg-base border border-gray-700 rounded py-2 hover:border-accent"
+                className="mt-4 w-full text-xs bg-bg-base border border-line rounded py-2 hover:border-accent"
               >
                 View Evidence Package →
               </button>
@@ -130,8 +130,8 @@ export function IncidentResponsePage() {
         </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-          <Siren className="text-text-secondary mb-4" size={48} />
-          <p className="text-sm text-text-secondary max-w-md">
+          <Siren className="text-ink-secondary mb-4" size={48} />
+          <p className="text-sm text-ink-secondary max-w-md">
             No active emergency. Load the coke-oven demo from the Safety Dashboard, then use Declare Emergency
             from Risk Detail or here to enter Incident Response mode.
           </p>

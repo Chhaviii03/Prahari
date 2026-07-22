@@ -2,19 +2,19 @@ import { Flame, HardHat, Users, Wrench, AlertTriangle, Zap, Box } from 'lucide-r
 
 export function bandColor(band: string): string {
   switch (band) {
-    case 'CRITICAL': return 'text-sev-critical bg-sev-critical/15 border-sev-critical/40';
-    case 'ACTIVE': return 'text-sev-active bg-sev-active/15 border-sev-active/40';
-    case 'WATCH': return 'text-sev-watch bg-sev-watch/15 border-sev-watch/40';
-    default: return 'text-sev-ok bg-sev-ok/15 border-sev-ok/40';
+    case 'CRITICAL': return 'text-red-700 bg-sev-critical/10 border-sev-critical/30';
+    case 'ACTIVE': return 'text-amber-800 bg-sev-active/15 border-sev-active/40';
+    case 'WATCH': return 'text-amber-800 bg-sev-watch/20 border-sev-watch/50';
+    default: return 'text-emerald-800 bg-sev-ok/15 border-sev-ok/40';
   }
 }
 
 export function bandHex(band: string): string {
   switch (band) {
-    case 'CRITICAL': return '#FF3B30';
-    case 'ACTIVE': return '#FF9F0A';
-    case 'WATCH': return '#FFD60A';
-    default: return '#30D158';
+    case 'CRITICAL': return '#DC2626';
+    case 'ACTIVE': return '#D97706';
+    case 'WATCH': return '#CA8A04';
+    default: return '#15803D';
   }
 }
 

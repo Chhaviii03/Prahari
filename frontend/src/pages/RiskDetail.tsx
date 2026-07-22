@@ -37,11 +37,11 @@ export function RiskDetail() {
     navigate('/incident');
   };
 
-  if (!risk) return <div className="p-4 text-text-secondary">Loading risk instance...</div>;
+  if (!risk) return <div className="p-4 text-ink-secondary">Loading risk instance...</div>;
 
   return (
     <div className="p-4 h-full flex flex-col">
-      <button onClick={() => navigate('/')} className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary mb-3">
+      <button onClick={() => navigate('/')} className="flex items-center gap-1 text-xs text-ink-secondary hover:text-ink-primary mb-3">
         <ArrowLeft size={14} /> Back to Dashboard
       </button>
 
@@ -50,16 +50,16 @@ export function RiskDetail() {
           <div className="flex items-center gap-2 mb-1">
             <SeverityBadge band={risk.crs.band} score={risk.crs.score} />
             <span className="text-sm font-medium">{risk.zone_id}</span>
-            <span className="text-xs text-text-secondary">{risk.motif_id} {risk.motif_version}</span>
+            <span className="text-xs text-ink-secondary">{risk.motif_id} {risk.motif_version}</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-text-secondary">
+          <div className="flex items-center gap-2 text-xs text-ink-secondary">
             <span>Lead time: {formatLeadTime(risk.lead_time_seconds)}</span>
             <span>·</span>
             <span className="text-sev-ok">detection.llm_involved = {String(risk.detection.llm_involved)}</span>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
-          <Link to={`/copilot?risk=${risk.risk_id}`} className="flex items-center gap-1 bg-bg-elevated border border-gray-700 text-xs px-3 py-1.5 rounded hover:border-accent">
+          <Link to={`/copilot?risk=${risk.risk_id}`} className="flex items-center gap-1 bg-bg-elevated border border-line text-xs px-3 py-1.5 rounded hover:border-accent">
             <MessageSquare size={14} /> AI Copilot
           </Link>
           <button onClick={handleAck} disabled={acting} className="flex items-center gap-1 bg-sev-ok/20 text-sev-ok border border-sev-ok/40 text-xs px-3 py-1.5 rounded">
@@ -74,14 +74,14 @@ export function RiskDetail() {
       <div className="flex-1 grid grid-cols-12 gap-4 min-h-0 overflow-hidden">
         <div className="col-span-7 space-y-4 overflow-y-auto">
           {risk.narrative && (
-            <div className="bg-bg-surface rounded-lg border border-gray-800 p-4">
-              <h3 className="text-xs font-medium text-text-secondary uppercase mb-2">Situational Narrative (P4 Planner)</h3>
+            <div className="bg-bg-surface rounded-xl border border-line shadow-card p-4">
+              <h3 className="text-xs font-medium text-ink-secondary uppercase mb-2">Situational Narrative (P4 Planner)</h3>
               <p className="text-sm leading-relaxed">{risk.narrative}</p>
             </div>
           )}
 
-          <div className="bg-bg-surface rounded-lg border border-gray-800 p-4">
-            <h3 className="text-xs font-medium text-text-secondary uppercase mb-2">Contributing Signals</h3>
+          <div className="bg-bg-surface rounded-xl border border-line shadow-card p-4">
+            <h3 className="text-xs font-medium text-ink-secondary uppercase mb-2">Contributing Signals</h3>
             <div className="space-y-2">
               {risk.contributing_signals.map((s, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm bg-bg-base rounded p-2">
@@ -93,22 +93,22 @@ export function RiskDetail() {
           </div>
 
           {evidence && (
-            <div className="bg-bg-surface rounded-lg border border-gray-800 p-4">
-              <h3 className="text-xs font-medium text-text-secondary uppercase mb-2 flex items-center gap-1">
+            <div className="bg-bg-surface rounded-xl border border-line shadow-card p-4">
+              <h3 className="text-xs font-medium text-ink-secondary uppercase mb-2 flex items-center gap-1">
                 <Shield size={14} /> Evidence Package (P5)
               </h3>
               <div className="space-y-3">
                 <div>
-                  <div className="text-xs text-text-secondary mb-1">Root Cause Hypotheses</div>
+                  <div className="text-xs text-ink-secondary mb-1">Root Cause Hypotheses</div>
                   {evidence.root_cause_hypotheses.map((h) => (
                     <div key={h.rank} className="bg-bg-base rounded p-2 mb-1 text-sm">
                       <span className="text-accent font-mono text-xs">#{h.rank}</span> {h.hypothesis}
-                      <span className="text-xs text-text-secondary ml-2">({(h.confidence * 100).toFixed(0)}%)</span>
+                      <span className="text-xs text-ink-secondary ml-2">({(h.confidence * 100).toFixed(0)}%)</span>
                     </div>
                   ))}
                 </div>
                 <div>
-                  <div className="text-xs text-text-secondary mb-1">Recommendations (Counterfactual-scored)</div>
+                  <div className="text-xs text-ink-secondary mb-1">Recommendations (Counterfactual-scored)</div>
                   {evidence.recommendations.map((r, i) => (
                     <div key={i} className="bg-bg-base rounded p-2 mb-1 text-sm border-l-2 border-accent">
                       <div>{r.action}</div>
@@ -119,21 +119,21 @@ export function RiskDetail() {
                   ))}
                 </div>
                 <div>
-                  <div className="text-xs text-text-secondary mb-1">Regulatory Citations</div>
+                  <div className="text-xs text-ink-secondary mb-1">Regulatory Citations</div>
                   {evidence.regulatory_citations.map((c) => (
                     <div key={c.ref} className="text-sm bg-bg-base rounded p-2 mb-1">
                       <span className="text-accent font-mono text-xs">{c.framework} {c.ref}</span>
-                      <p className="text-xs text-text-secondary mt-0.5">{c.text}</p>
+                      <p className="text-xs text-ink-secondary mt-0.5">{c.text}</p>
                     </div>
                   ))}
                 </div>
                 <div>
-                  <div className="text-xs text-text-secondary mb-1">Historical Precedent</div>
+                  <div className="text-xs text-ink-secondary mb-1">Historical Precedent</div>
                   {evidence.historical_references.map((h) => (
                     <div key={h.incident_id} className="text-sm bg-bg-base rounded p-2 mb-1">
                       <span className="text-accent font-mono text-xs">{h.incident_id}</span>
-                      <span className="text-xs text-text-secondary ml-2">sim {(h.similarity * 100).toFixed(0)}%</span>
-                      <p className="text-xs text-text-secondary mt-0.5">{h.summary}</p>
+                      <span className="text-xs text-ink-secondary ml-2">sim {(h.similarity * 100).toFixed(0)}%</span>
+                      <p className="text-xs text-ink-secondary mt-0.5">{h.summary}</p>
                     </div>
                   ))}
                 </div>
@@ -144,24 +144,24 @@ export function RiskDetail() {
 
         <div className="col-span-5 space-y-4 overflow-y-auto">
           {evidence && (
-            <div className="bg-bg-surface rounded-lg border border-gray-800 p-4">
-              <h3 className="text-xs font-medium text-text-secondary uppercase mb-3">Multi-Agent Analysis</h3>
+            <div className="bg-bg-surface rounded-xl border border-line shadow-card p-4">
+              <h3 className="text-xs font-medium text-ink-secondary uppercase mb-3">Multi-Agent Analysis</h3>
               <AgentAccordion findings={evidence.agent_findings} />
             </div>
           )}
 
-          <div className="bg-bg-surface rounded-lg border border-gray-800 p-4">
-            <h3 className="text-xs font-medium text-text-secondary uppercase mb-2">Timeline</h3>
+          <div className="bg-bg-surface rounded-xl border border-line shadow-card p-4">
+            <h3 className="text-xs font-medium text-ink-secondary uppercase mb-2">Timeline</h3>
             {risk.timeline.map((t, i) => (
               <div key={i} className="flex gap-2 text-xs mb-2">
-                <span className="text-text-secondary font-mono whitespace-nowrap">{new Date(t.ts).toLocaleTimeString()}</span>
+                <span className="text-ink-secondary font-mono whitespace-nowrap">{new Date(t.ts).toLocaleTimeString()}</span>
                 <span className="text-accent">{t.event}</span>
-                <span className="text-text-secondary">{t.actor}</span>
+                <span className="text-ink-secondary">{t.actor}</span>
               </div>
             ))}
           </div>
 
-          <Link to="/heatmap" className="block bg-bg-surface rounded-lg border border-gray-800 p-3 text-xs text-center hover:border-accent">
+          <Link to="/heatmap" className="block bg-bg-surface rounded-xl border border-line shadow-card p-3 text-xs text-center hover:border-accent">
             View zone on Geospatial Heatmap →
           </Link>
         </div>

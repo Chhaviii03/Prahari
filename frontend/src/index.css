@@ -2,15 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-bg-base: #FAF8F8;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-elevated: #FFF1EC;
+  --color-ink-primary: #0F172A;
+  --color-ink-secondary: #475569;
+  --color-accent: #B4533A;
+  --color-accent-strong: #9A3F2A;
+  --color-accent-soft: #FFF1EC;
+  --color-accent-muted: #FFC2B1;
+  --color-accent-peach: #F5A892;
+  --color-line: #E5E7EB;
+  --color-sev-critical: #DC2626;
+  --color-sev-active: #D97706;
+  --color-sev-watch: #CA8A04;
+  --color-sev-ok: #15803D;
+  --color-sev-stale: #6B7280;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: #0B0F14;
-  color: #F2F4F7;
-  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--color-bg-base);
+  color: var(--color-ink-primary);
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -24,18 +43,26 @@ body {
     45deg,
     transparent,
     transparent 4px,
-    rgba(142, 142, 147, 0.15) 4px,
-    rgba(142, 142, 147, 0.15) 8px
+    rgba(156, 163, 175, 0.18) 4px,
+    rgba(156, 163, 175, 0.18) 8px
   );
 }
 
 @keyframes pulse-critical {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(255, 59, 48, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
 }
 
 .pulse-critical {
   animation: pulse-critical 2s ease-in-out 1;
+}
+
+.app-watermark {
+  background-color: var(--color-bg-base);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 241, 236, 0.9), transparent),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='120' viewBox='0 0 180 120'%3E%3Ctext x='0' y='20' fill='%23FFF1EC' font-family='monospace' font-size='11'%3E01001101 11010010%3C/text%3E%3Ctext x='20' y='44' fill='%23FFF1EC' font-family='monospace' font-size='11'%3E10110100 00101101%3C/text%3E%3Ctext x='8' y='68' fill='%23FFF1EC' font-family='monospace' font-size='11'%3E01101001 10010110%3C/text%3E%3Ctext x='28' y='92' fill='%23FFF1EC' font-family='monospace' font-size='11'%3E11001010 01011001%3C/text%3E%3Ctext x='4' y='116' fill='%23FFF1EC' font-family='monospace' font-size='11'%3E00101101 10100110%3C/text%3E%3C/svg%3E");
+  background-attachment: fixed;
 }
 
 ::-webkit-scrollbar {
@@ -43,9 +70,12 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #151A21;
+  background: var(--color-bg-base);
 }
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: var(--color-line);
   border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-muted);
 }

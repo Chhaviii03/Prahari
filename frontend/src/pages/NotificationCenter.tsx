@@ -42,7 +42,7 @@ export function NotificationCenterPage() {
           <h1 className="text-lg font-semibold flex items-center gap-2">
             <Bell className="text-accent" size={20} /> Notification Center
           </h1>
-          <p className="text-xs text-text-secondary">
+          <p className="text-xs text-ink-secondary">
             Routed alerts, escalations, acknowledgement status (§19)
           </p>
         </div>
@@ -55,7 +55,7 @@ export function NotificationCenterPage() {
 
       <div className="flex-1 overflow-y-auto space-y-2">
         {items.length === 0 && (
-          <p className="text-sm text-text-secondary text-center py-8">No notifications. System nominal.</p>
+          <p className="text-sm text-ink-secondary text-center py-8">No notifications. System nominal.</p>
         )}
         {items.map((n) => {
           const Icon = icon(n.type);
@@ -63,8 +63,8 @@ export function NotificationCenterPage() {
             <button
               key={n.id}
               onClick={() => n.risk_id && navigate(`/risk/${n.risk_id}`)}
-              className={`w-full text-left bg-bg-surface border rounded-lg p-4 transition-colors hover:border-accent/50 ${
-                n.acknowledged ? 'border-gray-800 opacity-75' : 'border-accent/30'
+              className={`w-full text-left bg-bg-surface border rounded-xl p-4 shadow-card transition-colors hover:border-accent/50 ${
+                n.acknowledged ? 'border-line opacity-75' : 'border-accent/40 bg-accent-soft/30'
               }`}
             >
               <div className="flex items-start gap-3">
@@ -76,8 +76,8 @@ export function NotificationCenterPage() {
                       {n.priority}
                     </span>
                   </div>
-                  <p className="text-xs text-text-secondary line-clamp-2">{n.body}</p>
-                  <div className="flex items-center gap-3 mt-1 text-[10px] text-text-secondary">
+                  <p className="text-xs text-ink-secondary line-clamp-2">{n.body}</p>
+                  <div className="flex items-center gap-3 mt-1 text-[10px] text-ink-secondary">
                     <span>{new Date(n.ts).toLocaleString()}</span>
                     <span>{n.type}</span>
                     {n.acknowledged && (

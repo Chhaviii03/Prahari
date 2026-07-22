@@ -33,15 +33,15 @@ export function UserManagementPage() {
         <h1 className="text-lg font-semibold flex items-center gap-2">
           <Users className="text-accent" size={20} /> User Management
         </h1>
-        <p className="text-xs text-text-secondary">
+        <p className="text-xs text-ink-secondary">
           RBAC admin — roles per §5 persona matrix, enforced by policy layer (§17.2, §20)
         </p>
       </header>
 
-      <div className="bg-bg-surface border border-gray-800 rounded-lg overflow-hidden">
+      <div className="bg-bg-surface border border-line rounded-xl shadow-card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-xs text-text-secondary border-b border-gray-800 bg-bg-base">
+            <tr className="text-xs text-ink-secondary border-b border-line bg-bg-base">
               <th className="text-left p-3">User</th>
               <th className="text-left p-3">Username</th>
               <th className="text-left p-3">Role</th>
@@ -50,22 +50,22 @@ export function UserManagementPage() {
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.user_id} className="border-b border-gray-800/50 hover:bg-bg-elevated">
+              <tr key={u.user_id} className="border-b border-line/60 hover:bg-bg-elevated">
                 <td className="p-3 font-medium">{u.name}</td>
                 <td className="p-3 font-mono text-xs text-accent">{u.username}</td>
                 <td className="p-3">
-                  <span className="text-xs bg-bg-base border border-gray-700 rounded px-2 py-0.5 flex items-center gap-1 w-fit">
+                  <span className="text-xs bg-bg-base border border-line rounded px-2 py-0.5 flex items-center gap-1 w-fit">
                     <Shield size={10} /> {ROLE_LABELS[u.role] || u.role}
                   </span>
                 </td>
-                <td className="p-3 text-xs text-text-secondary">{u.zone_id || 'Plant-wide'}</td>
+                <td className="p-3 text-xs text-ink-secondary">{u.zone_id || 'Plant-wide'}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <p className="text-[10px] text-text-secondary mt-4">
+      <p className="text-[10px] text-ink-secondary mt-4">
         Demo accounts use password <code className="text-accent">prahari</code>. Production: SAML/OIDC/Azure AD + OPA policies (§17.4).
       </p>
     </div>

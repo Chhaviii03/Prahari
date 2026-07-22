@@ -39,54 +39,56 @@ export function Login({ onLogin }: { onLogin: (user: User, token: string) => voi
   };
 
   return (
-    <div className="min-h-screen bg-bg-base flex items-center justify-center p-4">
+    <div className="min-h-screen app-watermark flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Shield className="mx-auto text-accent mb-3" size={48} />
-          <h1 className="text-2xl font-bold">PRAHARI</h1>
-          <p className="text-text-secondary text-sm mt-1">Industrial Safety Intelligence Platform</p>
-          <p className="text-text-secondary text-xs mt-1">प्रहरी — the sentinel who watches so others may work</p>
+          <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-accent-soft flex items-center justify-center shadow-soft">
+            <Shield className="text-accent" size={32} />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-ink-primary">PRAHARI</h1>
+          <p className="text-ink-secondary text-sm mt-2">Industrial Safety Intelligence Platform</p>
+          <p className="text-ink-secondary text-xs mt-1">प्रहरी — the sentinel who watches so others may work</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-bg-surface rounded-lg border border-gray-800 p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-bg-surface rounded-2xl border border-line p-6 space-y-4 shadow-card">
           <div>
-            <label className="block text-xs text-text-secondary mb-1">Username</label>
+            <label className="block text-xs text-ink-secondary mb-1.5 font-medium">Username</label>
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full bg-bg-base border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+              className="w-full bg-bg-surface border border-line rounded-xl px-3 py-2.5 text-sm text-ink-primary placeholder:text-ink-secondary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
           </div>
           <div>
-            <label className="block text-xs text-text-secondary mb-1">Password</label>
+            <label className="block text-xs text-ink-secondary mb-1.5 font-medium">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-bg-base border border-gray-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-accent"
+              className="w-full bg-bg-surface border border-line rounded-xl px-3 py-2.5 text-sm text-ink-primary placeholder:text-ink-secondary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
           </div>
           {error && <p className="text-sev-critical text-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent hover:bg-accent/90 text-white font-medium py-2 rounded text-sm disabled:opacity-50"
+            className="w-full bg-accent-peach hover:bg-accent-muted text-ink-primary font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50 transition-colors shadow-soft"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         <div className="mt-6">
-          <p className="text-xs text-text-secondary mb-2 text-center">Quick demo accounts (password: prahari)</p>
+          <p className="text-xs text-ink-secondary mb-2 text-center">Quick demo accounts (password: prahari)</p>
           <div className="grid grid-cols-2 gap-2">
             {DEMO_ACCOUNTS.map((a) => (
               <button
                 key={a.username}
                 onClick={() => { setUsername(a.username); setPassword('prahari'); }}
-                className="bg-bg-surface border border-gray-800 rounded p-2 text-left hover:border-accent/50 transition-colors"
+                className="bg-bg-surface border border-line rounded-xl p-2.5 text-left hover:border-accent hover:bg-accent-soft/60 transition-colors shadow-card"
               >
-                <div className="text-xs font-medium">{a.label}</div>
-                <div className="text-[10px] text-text-secondary">{a.role}</div>
+                <div className="text-xs font-medium text-ink-primary">{a.label}</div>
+                <div className="text-[10px] text-ink-secondary">{a.role}</div>
               </button>
             ))}
           </div>
