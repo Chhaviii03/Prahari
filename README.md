@@ -15,6 +15,38 @@ PRAHARI sits above plant systems and fuses sensor, permit, maintenance, and work
 3. **Forecast-aware lead time** — Projects sensor trends against scheduled work
 4. **Evidence packages** — Cited regulations (OISD, Factory Act), historical precedent, counterfactual-scored recommendations
 
+## UI (current)
+
+The web app uses a **light coral / blush** safety console (not a dark SOC theme):
+
+| Token | Role | Example |
+|-------|------|---------|
+| Canvas | App background | `#FAF8F8` |
+| Surface | Cards, sidebar | `#FFFFFF` |
+| Accent | CTAs, icons, links | coral peach (`#F5A892` / `#B4533A` text) |
+| Ink | Primary / secondary text | `#0F172A` / `#475569` |
+
+- Font: **Plus Jakarta Sans** (+ JetBrains Mono for tabular IDs)
+- Soft rose binary watermark on the canvas
+- **Geospatial Heatmap** uses **Leaflet** (Esri satellite + OSM) with CRS zone polygons, workers, and evacuation routes over Visakhapatnam Steel Plant bounds
+
+### Main screens
+
+| Route | Screen |
+|-------|--------|
+| `/` | Live Safety Dashboard — risk queue + system status |
+| `/heatmap` | Leaflet plant map + zone / permit side panels |
+| `/risk/:id` | Evidence package, agent findings, acknowledge / emergency |
+| `/incident` | Incident response / evacuation |
+| `/permits` | Permit Intelligence |
+| `/copilot` | Grounded AI Q&A |
+| `/notifications` | Notification Center |
+| `/analytics` | Historical Analytics |
+| `/reports` | Reports Library |
+| `/executive` | Executive KPI roll-up |
+| `/mobile` | Worker field view |
+| `/admin/users`, `/settings` | Admin |
+
 ## Seed data (edit without touching code)
 
 All demo content is in the **`seed/`** folder as JSON files. See [`seed/README.md`](seed/README.md) for full docs.
@@ -129,14 +161,18 @@ npm run dev
 
 App: http://localhost:5173
 
+> After pull, always run `npm install` so **Leaflet** / **react-leaflet** are present (`leaflet/dist/leaflet.css` is imported from `src/main.tsx`).
+
 ### Demo Accounts
 
-| Username   | Role            | Password |
-|-----------|-----------------|----------|
-| safety    | Safety Officer  | prahari  |
-| permit    | Permit Officer  | prahari  |
-| executive | Executive       | prahari  |
-| worker    | Worker (mobile) | prahari  |
+| Username   | Role            | Password | Lands on |
+|-----------|-----------------|----------|----------|
+| safety    | Safety Officer  | prahari  | Dashboard |
+| permit    | Permit Officer  | prahari  | Permits |
+| compliance| Compliance Officer | prahari | Reports |
+| executive | Executive       | prahari  | Executive |
+| worker    | Worker (mobile) | prahari  | Mobile |
+| admin     | Admin           | prahari  | Users |
 
 ## Demo Flow
 
@@ -144,8 +180,10 @@ App: http://localhost:5173
 2. Click **"Load Coke-Oven Demo"** on the Safety Dashboard
 3. Open the Critical risk instance (C-12, CRS ~86)
 4. Review Evidence Package with OISD citations and counterfactual recommendations
-5. View **Geospatial Heatmap** for zone visualization
-6. Check **Worker Mobile** for field-worker view
+5. Open **Geospatial Heatmap** — satellite map with CRS overlays, workers, and evacuation routes
+6. Acknowledge the risk (notification fan-out) or escalate to **Incident Response**
+7. Check **Worker Mobile** for the field-worker evacuate / safe view
+8. Ask **AI Copilot** a grounded question about the active risk
 
 ## Architecture (8 Platforms)
 
@@ -156,7 +194,7 @@ App: http://localhost:5173
 | P3 | Compound Risk Engine | **Deterministic** motif detection + CRS scoring |
 | P4 | Multi-Agent Intelligence | AI enrichment (Sensor, Permit, Worker, Equipment, Compliance, Planner) |
 | P5 | Decision Intelligence | RAG, root cause, counterfactual recommendations |
-| P6 | Safety Operations | Dashboard, heatmap, emergency, mobile |
+| P6 | Safety Operations | Dashboard, Leaflet heatmap, emergency, mobile |
 | P7 | Learning & Knowledge | Outcome recording, evaluation |
 | P8 | Enterprise Platform | Auth, RBAC, audit |
 
@@ -165,8 +203,8 @@ App: http://localhost:5173
 - **Backend:** FastAPI, Pydantic, SQLAlchemy 2.0 async + asyncpg, Alembic, JWT auth
 - **LLM (P4):** OpenAI-compatible client — Groq free tier (primary) → Ollama local (fallback) → mock
 - **Database:** PostgreSQL 16 + TimescaleDB (`sensor_readings`, `audit_log` hypertables); embeddings as JSONB (pgvector-ready for Phase 4)
-- **Frontend:** React 18, TypeScript, Tailwind CSS, Vite
-- **Design:** Dark control-room theme per PRD §18
+- **Frontend:** React 18, TypeScript, Tailwind CSS, Vite, **Leaflet / react-leaflet**
+- **Design:** Light coral/blush theme (Plus Jakarta Sans); severity colors for CRITICAL / ACTIVE / WATCH / OK
 
 ## Multi-Agent LLM setup (P4)
 
@@ -193,7 +231,7 @@ Pipeline: Sensor → Permit → Equipment → Compliance → Planner. Outputs la
 Key endpoints under `/v1/`:
 - `POST /auth/login` — Authentication
 - `GET /ops/dashboard` — Live risk queue
-- `GET /ops/heatmap` — Geospatial data
+- `GET /ops/heatmap` — Geospatial / map config + zones
 - `GET /risk/instances` — Risk instances from P3
 - `GET /decision/evidence/by-risk/{id}` — Evidence packages
 - `POST /demo/load-scenario` — Load coke-oven demo
