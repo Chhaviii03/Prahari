@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import json
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,7 +34,23 @@ from app.platforms.risk_engine import MOTIFS
 from app.seed.loader import seed_data
 from app.state import state
 
-app = FastAPI(title=settings.app_name, version=settings.app_version, description="Industrial Safety Intelligence Platform")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    try:
+        await state.hydrate_from_db()
+    except Exception as exc:
+        # Allow API to start even if DB is momentarily unavailable
+        print(f"[PRAHARI] DB hydrate skipped: {exc}")
+    yield
+
+
+app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="Industrial Safety Intelligence Platform",
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -63,6 +79,7 @@ async def root():
         "version": settings.app_version,
         "tagline": "प्रहरी — the sentinel who watches so others may work",
         "docs": "/docs",
+        "database": settings.database_url.split("@")[-1] if "@" in settings.database_url else "configured",
     }
 
 
@@ -144,8 +161,9 @@ async def enrich(body: dict):
     if not risk:
         raise HTTPException(status_code=404, detail="Risk not found")
     zone = state.twin.get_zone(risk.zone_id)
-    from app.platforms.intelligence import enrich_risk
-    return enrich_risk(risk, zone)
+    from app.platforms.intelligence import enrich_risk_with_agents
+    enrichment, pipeline = await enrich_risk_with_agents(risk, zone)
+    return {"enrichment": enrichment, "pipeline": pipeline}
 
 
 @app.get("/v1/decision/evidence/{evidence_id}")
@@ -270,7 +288,7 @@ async def role_home(user=Depends(get_current_user)):
 async def acknowledge_risk(risk_id: str, body: TriageAction, user=Depends(get_current_user)):
     if not check_permission(user.get("role", ""), "acknowledge") and user.get("role") != "safety_officer":
         pass
-    risk = state.triage_risk(risk_id, "acknowledge", user.get("username", "unknown"), body.note)
+    risk = await state.triage_risk(risk_id, "acknowledge", user.get("username", "unknown"), body.note)
     if not risk:
         raise HTTPException(status_code=404, detail="Risk not found")
     await state.broadcast({"type": "risk_updated", "data": risk.model_dump(mode="json")})
@@ -279,7 +297,7 @@ async def acknowledge_risk(risk_id: str, body: TriageAction, user=Depends(get_cu
 
 @app.post("/v1/ops/risk/{risk_id}/escalate")
 async def escalate_risk(risk_id: str, body: TriageAction, user=Depends(get_current_user)):
-    risk = state.triage_risk(risk_id, "escalate", user.get("username", "unknown"), body.note)
+    risk = await state.triage_risk(risk_id, "escalate", user.get("username", "unknown"), body.note)
     if not risk:
         raise HTTPException(status_code=404, detail="Risk not found")
     return risk
@@ -289,7 +307,9 @@ async def escalate_risk(risk_id: str, body: TriageAction, user=Depends(get_curre
 async def dismiss_risk(risk_id: str, body: TriageAction, user=Depends(get_current_user)):
     if not body.justification:
         raise HTTPException(status_code=400, detail="Justification required for dismissal")
-    risk = state.triage_risk(risk_id, "dismiss", user.get("username", "unknown"), justification=body.justification)
+    risk = await state.triage_risk(
+        risk_id, "dismiss", user.get("username", "unknown"), justification=body.justification
+    )
     if not risk:
         raise HTTPException(status_code=404, detail="Risk not found")
     return risk
@@ -297,7 +317,7 @@ async def dismiss_risk(risk_id: str, body: TriageAction, user=Depends(get_curren
 
 @app.post("/v1/ops/emergency/declare")
 async def declare_emergency(body: EmergencyDeclare, user=Depends(get_current_user)):
-    emergency = state.declare_emergency(body.zone_id, body.risk_id, user.get("username", "unknown"))
+    emergency = await state.declare_emergency(body.zone_id, body.risk_id, user.get("username", "unknown"))
     await state.broadcast({"type": "emergency", "data": emergency.model_dump(mode="json")})
     return emergency
 
@@ -310,7 +330,7 @@ async def get_emergency():
 # --- P7 Learning ---
 @app.post("/v1/learning/outcome")
 async def record_outcome(outcome: OutcomeRecord):
-    state.record_outcome(outcome)
+    await state.record_outcome(outcome)
     return {"status": "recorded"}
 
 
@@ -353,13 +373,13 @@ async def step_replay(offset: int | None = None):
 
 @app.post("/v1/demo/reset")
 async def reset_demo():
-    state.reset_demo()
+    await state.reset_demo()
     return {"status": "reset"}
 
 
 @app.post("/v1/demo/load-scenario")
 async def load_scenario(scenario: str | None = None):
-    result = state.load_scenario(scenario)
+    result = await state.load_scenario(scenario)
     return {"status": "loaded", "result": result}
 
 

@@ -12,6 +12,9 @@ from app.seed.loader import seed_data
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# Compatibility alias for scripts/seed.py
+DEMO_USERS = seed_data.users
+
 ROLE_PERMISSIONS = {
     UserRole.SAFETY_OFFICER: {"acknowledge", "escalate", "dismiss", "emergency", "view_evidence", "view_dashboard"},
     UserRole.PERMIT_OFFICER: {"view_permits", "override_permit", "view_dashboard"},
