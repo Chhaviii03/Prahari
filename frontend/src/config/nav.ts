@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Map, BarChart3, Smartphone, MessageSquare,
+  LayoutDashboard, Map, Smartphone, MessageSquare,
   Siren, FileCheck, LineChart, FolderOpen, Bell, TrendingUp,
   Users, Settings, Shield,
 } from 'lucide-react';
@@ -17,7 +17,6 @@ export const ALL_NAV: NavItem[] = [
   { to: '/analytics', label: 'Historical Analytics', icon: LineChart, roles: ['safety_officer', 'compliance_officer', 'executive', 'admin'] },
   { to: '/reports', label: 'Reports Library', icon: FolderOpen, roles: ['compliance_officer', 'safety_officer', 'executive', 'admin'] },
   { to: '/executive', label: 'Executive Dashboard', icon: TrendingUp, roles: ['executive', 'admin'] },
-  { to: '/scorecard', label: 'Demo Scorecard', icon: BarChart3 },
   { to: '/admin/users', label: 'User Management', icon: Users, roles: ['admin'] },
   { to: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'safety_officer'] },
   { to: '/mobile', label: 'Worker Mobile', icon: Smartphone, roles: ['worker', 'admin'] },

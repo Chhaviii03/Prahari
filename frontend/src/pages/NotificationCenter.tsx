@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCircle, AlertTriangle, Siren } from 'lucide-react';
 import { api } from '../api';
 import { bandColor } from '../components/ui';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 type Notification = {
   id: string;
@@ -29,8 +30,15 @@ export function NotificationCenterPage() {
 
   useEffect(() => { load(); const i = setInterval(load, 5000); return () => clearInterval(i); }, []);
 
+  useWebSocket((event) => {
+    if (event.type === 'notification' || event.type === 'risk_updated' || event.type === 'emergency') {
+      load();
+    }
+  });
+
   const icon = (type: string) => {
     if (type === 'EMERGENCY') return Siren;
+    if (type === 'ACKNOWLEDGEMENT') return CheckCircle;
     if (type === 'RISK_ALERT') return AlertTriangle;
     return Bell;
   };
@@ -80,7 +88,12 @@ export function NotificationCenterPage() {
                   <div className="flex items-center gap-3 mt-1 text-[10px] text-text-secondary">
                     <span>{new Date(n.ts).toLocaleString()}</span>
                     <span>{n.type}</span>
-                    {n.acknowledged && (
+                    {n.type === 'ACKNOWLEDGEMENT' && (
+                      <span className="flex items-center gap-0.5 text-sev-ok">
+                        <CheckCircle size={10} /> Sent to team
+                      </span>
+                    )}
+                    {n.acknowledged && n.type !== 'ACKNOWLEDGEMENT' && (
                       <span className="flex items-center gap-0.5 text-sev-ok">
                         <CheckCircle size={10} /> Acknowledged
                       </span>

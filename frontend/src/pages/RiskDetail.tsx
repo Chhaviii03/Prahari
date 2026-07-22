@@ -12,6 +12,7 @@ export function RiskDetail() {
   const [risk, setRisk] = useState<RiskInstance | null>(null);
   const [evidence, setEvidence] = useState<EvidencePackage | null>(null);
   const [acting, setActing] = useState(false);
+  const [ackNotice, setAckNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -22,9 +23,11 @@ export function RiskDetail() {
   const handleAck = async () => {
     if (!id) return;
     setActing(true);
+    setAckNotice(null);
     try {
       await api.acknowledgeRisk(id, 'Action taken per recommendation');
       setRisk(await api.getRisk(id));
+      setAckNotice('Acknowledgement sent to supervisors and compliance officers.');
     } finally {
       setActing(false);
     }
@@ -70,6 +73,12 @@ export function RiskDetail() {
           </button>
         </div>
       </div>
+
+      {ackNotice && (
+        <div className="mb-3 text-xs bg-sev-ok/10 border border-sev-ok/40 text-sev-ok rounded p-3 flex items-center gap-2">
+          <CheckCircle size={14} /> {ackNotice}
+        </div>
+      )}
 
       <div className="flex-1 grid grid-cols-12 gap-4 min-h-0 overflow-hidden">
         <div className="col-span-7 space-y-4 overflow-y-auto">

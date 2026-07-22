@@ -14,7 +14,6 @@ PRAHARI sits above plant systems and fuses sensor, permit, maintenance, and work
 2. **Compound hazard detection** — Gas + hot work + confined space, even when no single sensor breaches threshold
 3. **Forecast-aware lead time** — Projects sensor trends against scheduled work
 4. **Evidence packages** — Cited regulations (OISD, Factory Act), historical precedent, counterfactual-scored recommendations
-5. **Demo scorecard** — Side-by-side comparison vs single-sensor SCADA baseline
 
 ## Seed data (edit without touching code)
 
@@ -145,9 +144,8 @@ App: http://localhost:5173
 2. Click **"Load Coke-Oven Demo"** on the Safety Dashboard
 3. Open the Critical risk instance (C-12, CRS ~86)
 4. Review Evidence Package with OISD citations and counterfactual recommendations
-5. Visit **Demo Scorecard** to see PRAHARI vs baseline comparison
-6. View **Geospatial Heatmap** for zone visualization
-7. Check **Worker Mobile** for field-worker view
+5. View **Geospatial Heatmap** for zone visualization
+6. Check **Worker Mobile** for field-worker view
 
 ## Architecture (8 Platforms)
 
@@ -199,7 +197,7 @@ Key endpoints under `/v1/`:
 - `GET /risk/instances` — Risk instances from P3
 - `GET /decision/evidence/by-risk/{id}` — Evidence packages
 - `POST /demo/load-scenario` — Load coke-oven demo
-- `GET /demo/scorecard` — Evaluation metrics
+- `GET /learning/eval` — Session evaluation metrics
 
 ## License
 

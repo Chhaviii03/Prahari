@@ -9,6 +9,7 @@ export function Dashboard() {
   const [items, setItems] = useState<DashboardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -26,9 +27,14 @@ export function Dashboard() {
 
   const loadDemo = async () => {
     setDemoLoading(true);
+    setDemoError(null);
     try {
       await api.loadScenario();
       await load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to load demo';
+      setDemoError(msg);
+      console.error(e);
     } finally {
       setDemoLoading(false);
     }
@@ -57,6 +63,12 @@ export function Dashboard() {
           </button>
         </div>
       </header>
+
+      {demoError && (
+        <div className="mb-3 text-xs bg-sev-critical/10 border border-sev-critical/40 text-sev-critical rounded p-3">
+          Demo load failed: {demoError}. If using Postgres, start Docker and run <code className="font-mono">docker compose up -d</code> then <code className="font-mono">alembic upgrade head</code> in backend/.
+        </div>
+      )}
 
       <div className="flex-1 grid grid-cols-12 gap-4 min-h-0">
         <div className="col-span-5 bg-bg-surface rounded-lg border border-gray-800 flex flex-col overflow-hidden">
